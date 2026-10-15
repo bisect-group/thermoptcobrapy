@@ -12,6 +12,7 @@ import pytest
 from thermoptcobrapy import cycle_basis, prepare
 from thermoptcobrapy._milp import (
     SAFETY_FACTOR,
+    _big_m_resolves,
     check_tolerances,
     solve_indicator_problem,
     supports_indicators,
@@ -128,4 +129,70 @@ def test_asking_for_indicators_without_them_is_an_error(cycle_model):
             objective_ids={"R4"},
             maximise=True,
             use_indicators=True,
+        )
+
+
+@milp
+def test_big_m_is_preferred_while_it_resolves_the_threshold(cycle_model):
+    """Test that the cheaper formulation is chosen when it is adequate.
+
+    The two agree on the answer and big-M is usually much the faster, so
+    indicator constraints should only be reached for when the threshold is
+    finer than big-M can resolve.
+
+    """
+    working, _ = prepare(cycle_model)
+    working.tolerance = 1e-9
+
+    # Bounds of 1000 and an integrality tolerance of 1e-9 leave 1e-6 of
+    # slack, so the floor sits at SAFETY_FACTOR times that.
+    assert _big_m_resolves(working, 1e-3, 1e-9, 1e-6)
+    assert not _big_m_resolves(working, 1e-7, 1e-9, 1e-6)
+
+
+@milp
+def test_the_finer_threshold_switches_to_indicators(cycle_model, caplog):
+    """Test that a threshold big-M cannot resolve is not simply rejected."""
+    import logging
+
+    working, _ = prepare(cycle_model)
+    working.tolerance = 1e-9
+    tic_ids, basis = cycle_basis(working, tol=1e-4, seed=0)
+
+    with caplog.at_level(logging.INFO, logger="thermoptcobrapy._milp"):
+        problem = solve_indicator_problem(
+            working,
+            tol=1e-6,
+            tic_ids=tic_ids,
+            basis=basis,
+            objective_ids={rxn.id for rxn in working.reactions},
+            maximise=True,
+            minimum_for={rxn.id for rxn in working.reactions},
+            time_limit=60,
+        )
+
+    assert "native indicator constraints" in caplog.text
+    # and the answer is still right: the loop cannot carry flux
+    assert set(problem.active_ids()) == {"R4", "EX_A", "EX_D"}
+
+
+def test_a_fine_threshold_without_indicators_is_still_rejected(cycle_model):
+    """Test that the fallback does not paper over an impossible request.
+
+    A solver with no indicator constraints cannot resolve a threshold below
+    the big-M floor, and should say so rather than return nonsense.
+
+    """
+    cycle_model.solver = "glpk"
+    working, _ = prepare(cycle_model)
+
+    with pytest.raises(ThermOptError, match="too small for this model"):
+        solve_indicator_problem(
+            working,
+            tol=1e-7,
+            tic_ids=[],
+            basis=np.zeros((0, 0)),
+            objective_ids={"R4"},
+            maximise=True,
+            minimum_for={"R4"},
         )

@@ -141,6 +141,35 @@ class _Problem:
         ]
 
 
+def _big_m_resolves(
+    model: "Model", tol: float, integrality: float, feasibility: float
+) -> bool:
+    """Return whether the big-M formulation can resolve this threshold.
+
+    Parameters
+    ----------
+    model : cobra.Model
+        The model whose bounds set the big-M coefficients.
+    tol : float
+        The flux threshold wanted.
+    integrality : float
+        The integrality tolerance the solve would use.
+    feasibility : float
+        The feasibility tolerance the solve would use.
+
+    Returns
+    -------
+    bool
+        False when :func:`check_tolerances` would reject the combination.
+
+    """
+    try:
+        check_tolerances(model, tol, integrality, feasibility, big_m=True)
+    except ThermOptError:
+        return False
+    return True
+
+
 def supports_indicators(model: "Model") -> bool:
     """Return whether the model's solver offers native indicator constraints.
 
@@ -463,9 +492,13 @@ def solve_indicator_problem(
         The integrality tolerance (default 1e-9, as the MATLAB sets).
     use_indicators : bool, optional
         Whether to express the indicators natively rather than through big-M
-        coefficients. The default, None, uses them whenever the solver has
-        them. Forcing False is useful for comparing the two formulations;
-        forcing True on a solver without them is an error.
+        coefficients. The default, None, picks whichever fits: big-M while
+        `tol` clears the slack it leaves, native indicators when it does not
+        and the solver offers them. Big-M is the faster of the two on most
+        models, often by a wide margin, and the two return the same verdicts,
+        so there is no reason to pay for indicators until the threshold
+        demands them. Forcing either is allowed; forcing True on a solver
+        without them is an error.
 
     Returns
     -------
@@ -473,13 +506,30 @@ def solve_indicator_problem(
         The solution, or an empty one when the solver found nothing.
 
     """
-    native = supports_indicators(model) if use_indicators is None else use_indicators
-    if native and not supports_indicators(model):
-        raise ThermOptError(
-            f"{type(model.solver).__module__} has no native indicator "
-            "constraints; leave use_indicators unset to fall back to big-M."
-        )
     own_tolerance = getattr(model, "tolerance", MIN_FEASIBILITY)
+
+    if use_indicators is None:
+        # Prefer big-M, which is usually much the faster, and reach for
+        # indicator constraints only when the threshold is finer than big-M
+        # can resolve. The two agree on the answer, so this costs nothing.
+        native = supports_indicators(model) and not _big_m_resolves(
+            model, tol, integrality, max(MIN_FEASIBILITY, own_tolerance)
+        )
+        if native:
+            logger.info(
+                "tol=%.3g is finer than big-M can resolve on this model; "
+                "using native indicator constraints instead",
+                tol,
+            )
+    else:
+        native = use_indicators
+        if native and not supports_indicators(model):
+            raise ThermOptError(
+                f"{type(model.solver).__module__} has no native indicator "
+                "constraints; leave use_indicators unset to fall back to "
+                "big-M."
+            )
+
     # Only big-M needs protecting from a tight feasibility tolerance.
     feasibility = own_tolerance if native else max(MIN_FEASIBILITY, own_tolerance)
     check_tolerances(model, tol, integrality, feasibility, big_m=not native)
