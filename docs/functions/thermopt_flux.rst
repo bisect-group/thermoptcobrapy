@@ -22,9 +22,10 @@ as ``solution.fluxes`` is, works directly.
 How it works
 ------------
 
-Take the network from :doc:`../tutorials/cycles` — four metabolites, five
-reversible internal reactions and two exchange reactions, all bounded
-``(-1000, 1000)``:
+Take the network from :doc:`../tutorials/cycles` — four metabolites, four
+internal reactions and two exchange reactions. All six are reversible,
+bounded ``(-1000, 1000)``, so the arrow below is only the reference
+direction, the one a *positive* flux runs in:
 
 .. list-table::
    :header-rows: 1
@@ -34,16 +35,16 @@ reversible internal reactions and two exchange reactions, all bounded
      - Stoichiometry
      - Role
    * - ``R1``
-     - ``A → B``
+     - ``A ↔ B``
      - in the TIC
    * - ``R2``
-     - ``B → C``
+     - ``B ↔ C``
      - in the TIC
    * - ``R3``
-     - ``C → A``
+     - ``C ↔ A``
      - in the TIC
    * - ``R4``
-     - ``A → D``
+     - ``A ↔ D``
      - throughput
    * - ``EX_A``
      - ``A ↔``

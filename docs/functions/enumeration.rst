@@ -51,10 +51,11 @@ coefficients matter. It needs a real mixed-integer solver: Gurobi or CPLEX.
 A worked example
 ----------------
 
-A network of five reversible internal reactions over four metabolites, plus
-two exchange reactions. ``R1``, ``R2`` and ``R3`` form the cycle
-``A → B → C → A``, and ``R5`` closes a second one directly between ``B`` and
-``A``:
+A network of five internal reactions over four metabolites, plus two
+exchange reactions. Every one of them is reversible, so the arrow below is
+only the reference direction — the direction a *positive* flux runs in.
+``R1``, ``R2`` and ``R3`` can form the cycle ``A → B → C → A``, and ``R5``
+closes a second one directly between ``B`` and ``A``:
 
 .. list-table::
    :header-rows: 1
@@ -64,19 +65,19 @@ two exchange reactions. ``R1``, ``R2`` and ``R3`` form the cycle
      - Stoichiometry
      - Bounds
    * - ``R1``
-     - ``A → B``
+     - ``A ↔ B``
      - (-1000, 1000)
    * - ``R2``
-     - ``B → C``
+     - ``B ↔ C``
      - (-1000, 1000)
    * - ``R3``
-     - ``C → A``
+     - ``C ↔ A``
      - (-1000, 1000)
    * - ``R4``
-     - ``A → D``
+     - ``A ↔ D``
      - (-1000, 1000)
    * - ``R5``
-     - ``B → A``
+     - ``B ↔ A``
      - (-1000, 1000)
    * - ``EX_A``
      - ``A ↔``
