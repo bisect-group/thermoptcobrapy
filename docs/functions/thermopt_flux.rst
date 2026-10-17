@@ -19,35 +19,6 @@ Usage
 The input is left unmodified; a new dict is returned. A pandas ``Series``,
 as ``solution.fluxes`` is, works directly.
 
-How it works
-------------
-
-A flux distribution from FBA or from flux sampling satisfies the mass
-balance, but may carry any amount of flux through a TIC, because nothing in
-the problem penalises it. For each TIC, if the distribution runs **every**
-one of its reactions in the TIC's own direction, a scaled copy of the TIC is
-subtracted.
-
-The amount removed is set by the reaction carrying the least flux, so that
-one lands exactly on zero. Removing more would push it through zero into the
-opposite direction, which would alter the net flux rather than only remove
-the loop:
-
-.. code-block:: python
-
-   >>> thermopt_flux({"R1": 7.0, "R2": 5.0, "R3": 6.0},
-   ...               [["R1", "R2", "R3"]], [[1.0, 1.0, 1.0]])
-   {'R1': 2.0, 'R2': 0.0, 'R3': 1.0}
-
-A TIC whose reactions are not all running in its direction is left
-unchanged:
-
-.. code-block:: python
-
-   >>> thermopt_flux({"R1": 5.0, "R2": 5.0, "R3": -5.0},
-   ...               [["R1", "R2", "R3"]], [[1.0, 1.0, 1.0]])
-   {'R1': 5.0, 'R2': 5.0, 'R3': -5.0}
-
 On a genome-scale model
 -----------------------
 
