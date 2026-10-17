@@ -11,7 +11,7 @@ the network can export:
 
    from cobra import Model, Metabolite, Reaction
 
-   model = Model("ring")
+   model = Model("toy")          # "toy" is just the model id
    A, B, C, D = (Metabolite(x) for x in "ABCD")
 
    reactions = []

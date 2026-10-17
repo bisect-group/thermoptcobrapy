@@ -13,7 +13,7 @@ form the cycle ``A → B → C → A``; ``R4`` drains ``A`` to ``D``:
 
    from cobra import Model, Metabolite, Reaction
 
-   model = Model("ring")
+   model = Model("toy")          # "toy" is just the model id
    A, B, C, D = (Metabolite(x) for x in "ABCD")
 
    reactions = []
@@ -69,6 +69,10 @@ Running ThermOptCC
 box constraints alone — that is what FVA just reported. Adding the
 thermodynamic constraints reveals them as thermodynamically blocked.
 
+``tol`` is the flux a reaction has to reach to count as carrying flux, and
+it is the one parameter here that cannot simply be made as small as you
+like; see :doc:`numerics` before choosing a value.
+
 The usual alternative: loopless FVA
 -----------------------------------
 
@@ -104,6 +108,14 @@ bare verdict. Loopless FVA gives neither without further work.
 
 Directions
 ----------
+
+``get_direction=True`` asks a harder question, and costs accordingly. To
+decide a direction, every reversible reaction is split into a forward and a
+reverse half and each half is tested on its own, so the program carries
+roughly twice the binaries. The split is necessary rather than wasteful: the
+search drops a reaction as soon as it is shown to carry flux, so without it
+a reaction proved to run forward would never be asked whether it can also
+run backward. Leave it off when ``Blocked``/``Unblocked`` is all you need.
 
 .. code-block:: python
 
@@ -143,22 +155,3 @@ the returned model:
 The flux maps one to one onto the original's, negated. Reading a
 ``"Forward"`` verdict against the input model would be reading it backwards.
 This returned model is the MATLAB's ``modModel``.
-
-A forced bound can make the question unanswerable
---------------------------------------------------
-
-Every reaction has to carry either exactly zero flux or at least ``tol``. A
-reaction pinned to a growth rate can leave no room for that, and the program
-becomes infeasible — which is reported as such, rather than reported as
-every reaction being blocked:
-
-.. code-block:: python
-
-   >>> thermopt_cc(ecoli, tol=1e-4)       # biomass forced at 25.03
-   ThermOptError: The consistency program is infeasible at tol=0.0001, ...
-
-Biomass at 25.03 requires biotin synthesis to carry 6.19e-5, below the
-threshold. Either lower ``tol`` — ``5e-5`` works on that model — or release
-the forced bound, which is in any case appropriate if the question is which
-reactions *can* carry flux rather than what happens at a fixed growth rate.
-See :doc:`numerics`.
