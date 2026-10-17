@@ -19,13 +19,27 @@ ThermOpt addresses them in four ways:
 | Routine | Question it answers |
 |---|---|
 | `thermopt_cc` | In which directions can each reaction carry flux, once cycles are excluded? |
-| `thermopt_enum_lp` / `thermopt_enum_milp` | Which cycles does this model contain, and in what proportions? |
+| `thermopt_enum_milp` | Which cycles does this model contain, and in what proportions? |
 | `thermopt_flux` | Given a flux distribution, what does it look like with the cycling removed? |
 | `thermoptics` | Build a context-specific model that is thermodynamically feasible by construction. |
 
 Reference: [Thermodynamically-constrained metabolic network reconstruction](https://www.sciencedirect.com/science/article/pii/S2589004225012660).
 
 ## Installation
+
+Every internal consistency check this package runs goes through
+[spectra-cobra](https://github.com/bisect-group/spectra-cobra), so it is a
+required dependency rather than an optional one. It is not published on
+PyPI, so clone and install it first:
+
+```bash
+git clone https://github.com/bisect-group/spectra-cobra.git
+cd spectra-cobra
+pip install -e .
+cd ..
+```
+
+Then thermoptcobrapy itself:
 
 ```bash
 git clone https://github.com/bisect-group/thermoptcobrapy.git
@@ -44,11 +58,6 @@ reporting `optimal` with a reaction's indicator set while that reaction
 carries no flux. Every solution is checked against its own indicator
 constraints and a solver that returns one it forbids raises rather than
 being trusted.
-
-Installing [spectra-cobra](https://github.com/bisect-group/spectra-cobra)
-alongside is optional. When it is present the internal consistency checks use
-SPECTRA, which is faster on large models; otherwise cobrapy's `fastcc` is
-used. The answers are the same either way.
 
 
 ## Choosing `tol`

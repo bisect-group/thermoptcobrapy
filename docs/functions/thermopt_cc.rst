@@ -99,7 +99,8 @@ Considerably. On five *E. coli* models from the protocol's Step 3:
 
 Every flux-blocked reaction is also thermodynamically blocked, as it must be.
 The difference — 130 to 242 reactions per model — is reactions that FVA and
-``fastcc`` accept because they can carry flux, but only by cycling.
+plain flux consistency accept because they can carry flux, but only by
+cycling.
 
 Reference
 ---------

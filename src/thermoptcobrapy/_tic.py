@@ -7,19 +7,17 @@ circle: with nothing entering or leaving, a steady state has no other option.
 The reactions that remain flux consistent under those conditions are exactly
 the reactions that can take part in a cycle.
 
-That is a consistency check, which is why the MATLAB reaches for ``spectraCC``
-and falls back to ``fastcc``. The same preference is kept here.
+That is a consistency check, done with SPECTRA, mirroring the MATLAB's own
+``spectraCC``.
 """
 
-from logging import getLogger
-from typing import TYPE_CHECKING, List, Set
+from typing import TYPE_CHECKING, List, Optional, Set
 
 from ._subset import subset_model
+from .exceptions import ThermOptError
 
 if TYPE_CHECKING:
     from cobra.core import Model
-
-logger = getLogger(__name__)
 
 
 def exchange_reaction_ids(model: "Model") -> Set[str]:
@@ -41,7 +39,9 @@ def exchange_reaction_ids(model: "Model") -> Set[str]:
     return {rxn.id for rxn in model.reactions if rxn.boundary}
 
 
-def consistent_reaction_ids(model: "Model", tol: float) -> Set[str]:
+def consistent_reaction_ids(
+    model: "Model", tol: float, seed: Optional[int] = None
+) -> Set[str]:
     """Return the flux consistent reactions of a model.
 
     Parameters
@@ -50,29 +50,32 @@ def consistent_reaction_ids(model: "Model", tol: float) -> Set[str]:
         The model to check.
     tol : float
         The flux threshold a reaction has to reach.
+    seed : int, optional
+        A seed for SPECTRA's own randomisation (default None).
 
     Returns
     -------
     set of str
         The identifiers of the reactions that can carry flux.
 
-    Notes
-    -----
-    Prefers SPECTRA's consistency check when it is installed and falls back
-    to cobrapy's ``fastcc``, mirroring the MATLAB's ``if exist('spectraCC')``.
-    The two agree on which reactions are blocked; SPECTRA is the faster of
-    them on larger models.
+    Raises
+    ------
+    ThermOptError
+        If ``spectra_cobra`` is not installed. It is a required dependency,
+        not an optional one: every consistency check in this package goes
+        through it.
 
     """
     try:
         from spectra_cobra import consistent_reaction_ids as spectra_ids
-    except ImportError:
-        from cobra.flux_analysis import fastcc
+    except ImportError as error:
+        raise ThermOptError(
+            "spectra_cobra is not installed, but every consistency check in "
+            "this package depends on it. Clone and install it: "
+            "https://github.com/bisect-group/spectra-cobra"
+        ) from error
 
-        logger.debug("spectra_cobra is not installed; using fastcc")
-        return {rxn.id for rxn in fastcc(model, flux_threshold=tol).reactions}
-
-    ids, _ = spectra_ids(model, tol=tol)
+    ids, _ = spectra_ids(model, tol=tol, seed=seed)
     return ids
 
 
@@ -103,7 +106,9 @@ def cycle_submodel(model: "Model") -> "Model":
     return restricted
 
 
-def cycle_reaction_ids(model: "Model", tol: float) -> List[str]:
+def cycle_reaction_ids(
+    model: "Model", tol: float, seed: Optional[int] = None
+) -> List[str]:
     """Return the reactions that can take part in an internal cycle.
 
     Parameters
@@ -112,6 +117,8 @@ def cycle_reaction_ids(model: "Model", tol: float) -> List[str]:
         The model to inspect, already oriented. It is left unchanged.
     tol : float
         The flux threshold a reaction has to reach to count as cycling.
+    seed : int, optional
+        A seed for SPECTRA's own randomisation (default None).
 
     Returns
     -------
@@ -119,11 +126,11 @@ def cycle_reaction_ids(model: "Model", tol: float) -> List[str]:
         The identifiers, in model order.
 
     """
-    consistent = consistent_reaction_ids(cycle_submodel(model), tol)
+    consistent = consistent_reaction_ids(cycle_submodel(model), tol, seed=seed)
     return [rxn.id for rxn in model.reactions if rxn.id in consistent]
 
 
-def cycle_basis(model: "Model", tol: float, seed=None):
+def cycle_basis(model: "Model", tol: float, seed: Optional[int] = None):
     """Return the cycle reactions of a model and a sparse basis for them.
 
     Parameters
@@ -133,7 +140,9 @@ def cycle_basis(model: "Model", tol: float, seed=None):
     tol : float
         The flux threshold a reaction has to reach to count as cycling.
     seed : int, optional
-        A seed for Fast-SNP's random weights (default None).
+        A seed for the randomisation in both the consistency pre-check
+        (SPECTRA's own) and Fast-SNP's random weights (default None). The
+        same seed is used for both.
 
     Returns
     -------
@@ -147,7 +156,7 @@ def cycle_basis(model: "Model", tol: float, seed=None):
     from ._nullspace import fast_snp
 
     restricted = cycle_submodel(model)
-    consistent = consistent_reaction_ids(restricted, tol)
+    consistent = consistent_reaction_ids(restricted, tol, seed=seed)
     tic_ids = [rxn.id for rxn in model.reactions if rxn.id in consistent]
     if not tic_ids:
         return [], np.zeros((0, 0))

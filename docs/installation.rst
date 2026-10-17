@@ -1,6 +1,20 @@
 Installation
 ============
 
+Every internal consistency check this package runs goes through
+`spectra-cobra <https://github.com/bisect-group/spectra-cobra>`_, so it is a
+required dependency rather than an optional one. It is not published on
+PyPI, so clone and install it first:
+
+.. code-block:: bash
+
+   git clone https://github.com/bisect-group/spectra-cobra.git
+   cd spectra-cobra
+   pip install -e .
+   cd ..
+
+Then thermoptcobrapy itself:
+
 .. code-block:: bash
 
    git clone https://github.com/bisect-group/thermoptcobrapy.git
@@ -27,15 +41,3 @@ returns one it forbids raises :class:`~thermoptcobrapy.ThermOptSolverError`
 rather than being believed.
 
 See :doc:`tutorials/numerics` for what that check is guarding against.
-
-SPECTRA
--------
-
-`spectra-cobra <https://github.com/bisect-group/spectra-cobra>`_ is optional.
-When it is installed the internal consistency checks use SPECTRA, which is
-faster on large models; otherwise cobrapy's ``fastcc`` is used. The answers
-are the same either way, and the MATLAB makes the same substitution.
-
-.. code-block:: bash
-
-   pip install -e ".[spectra]"
