@@ -1,12 +1,15 @@
 """Test the thermodynamically constrained consistency check."""
 
+import pytest
 from cobra.flux_analysis import flux_variability_analysis
 
+import thermoptcobrapy.consistency as consistency_module
 from thermoptcobrapy import (
     BLOCKED,
     FORWARD,
     REVERSIBLE,
     UNBLOCKED,
+    ThermOptTimeLimitError,
     thermodynamically_blocked_ids,
     thermopt_cc,
 )
@@ -105,6 +108,29 @@ def test_the_input_model_is_not_modified(cycle_model):
         len(cycle_model.constraints),
         {rxn.id: rxn.bounds for rxn in cycle_model.reactions},
     )
+
+
+@milp
+def test_hitting_the_time_limit_ceiling_is_an_error(monkeypatch, cycle_model):
+    """Test that an unproven verdict at the ceiling raises rather than warns.
+
+    Reporting the unsettled reactions as blocked would dress a timeout up as
+    an answer, so this has to fail loudly instead.
+
+    """
+
+    class _TimedOut:
+        status = "time_limit"
+
+        def active_ids(self):
+            return []
+
+    monkeypatch.setattr(
+        consistency_module, "solve_indicator_problem", lambda *a, **k: _TimedOut()
+    )
+
+    with pytest.raises(ThermOptTimeLimitError):
+        thermopt_cc(cycle_model, tol=1e-4, seed=0, time_limit=1.0, max_time_limit=1.0)
 
 
 @milp

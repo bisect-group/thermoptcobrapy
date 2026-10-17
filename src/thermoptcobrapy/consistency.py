@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Tuple
 from ._milp import solve_indicator_problem
 from ._orientation import prepare
 from ._tic import cycle_basis
-from .exceptions import ThermOptError
+from .exceptions import ThermOptError, ThermOptTimeLimitError
 
 if TYPE_CHECKING:
     from cobra.core import Model
@@ -144,16 +144,19 @@ def thermopt_cc(
             )
             continue
 
-        if problem.status == "time_limit" and current_limit < max_time_limit:
-            current_limit = min(current_limit + TIME_LIMIT_STEP, max_time_limit)
-            logger.info("solve timed out; raising the limit to %gs", current_limit)
-            continue
         if problem.status == "time_limit":
-            logger.warning(
-                "giving up at the %gs ceiling with %d reactions unsettled; "
-                "they are reported blocked but were never proved so",
-                max_time_limit,
-                len(core),
+            if current_limit < max_time_limit:
+                current_limit = min(current_limit + TIME_LIMIT_STEP, max_time_limit)
+                logger.info(
+                    "solve timed out; raising the limit to %gs", current_limit
+                )
+                continue
+            raise ThermOptTimeLimitError(
+                f"the consistency solve hit the {max_time_limit:g}s time limit "
+                f"ceiling with {len(core)} reaction(s) still unsettled. Their "
+                f"blocked/unblocked verdict was never proved, so reporting them "
+                f"either way would be a guess dressed up as a result. Raise "
+                f"max_time_limit, or loosen tol so each solve is cheaper."
             )
         break
 
