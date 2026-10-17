@@ -51,8 +51,47 @@ coefficients matter. It needs a real mixed-integer solver: Gurobi or CPLEX.
 A worked example
 ----------------
 
-Take ``A→B→C→A`` with an extra ``B→A``. There are three TICs, each feasible
-in two directions, and the enumerator finds all six:
+A network of five reversible internal reactions over four metabolites, plus
+two exchange reactions. ``R1``, ``R2`` and ``R3`` form the cycle
+``A → B → C → A``, and ``R5`` closes a second one directly between ``B`` and
+``A``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 34 50
+
+   * - Reaction
+     - Stoichiometry
+     - Bounds
+   * - ``R1``
+     - ``A → B``
+     - (-1000, 1000)
+   * - ``R2``
+     - ``B → C``
+     - (-1000, 1000)
+   * - ``R3``
+     - ``C → A``
+     - (-1000, 1000)
+   * - ``R4``
+     - ``A → D``
+     - (-1000, 1000)
+   * - ``R5``
+     - ``B → A``
+     - (-1000, 1000)
+   * - ``EX_A``
+     - ``A ↔``
+     - (-1000, 1000)
+   * - ``EX_D``
+     - ``D ↔``
+     - (-1000, 1000)
+
+``R4`` and the two exchange reactions take part in no TIC: ``R4`` drains
+``A`` to ``D``, which only ``EX_D`` touches, so none of the three can carry
+flux once the exchanges are shut. :doc:`../tutorials/cycles` builds this
+network in cobrapy if you want to run it.
+
+Three TICs exist, each feasible in two directions, and the enumerator finds
+all six:
 
 .. code-block:: text
 
@@ -63,10 +102,19 @@ in two directions, and the enumerator finds all six:
    ['R2', 'R3', 'R5']        [ 1.0,  1.0, -1.0]
    ['R2', 'R3', 'R5']        [-1.0, -1.0,  1.0]
 
-The third pair is the composite: ``R2`` and ``R3`` forward, against ``R5``
-reversed. Note that a TIC made entirely of reversible reactions is also
-feasible in the reverse direction, so its mirror image is recorded rather
-than searched for.
+Reading the first row: ``R1`` (``A → B``) and ``R5`` (``B → A``) both run
+forward, carrying equal flux, which returns ``A`` to itself. The second is
+the three-reaction cycle ``A → B → C → A``.
+
+The third pair is the composite, and shows what the sign of a coefficient
+means: ``R2`` and ``R3`` run forward while ``R5`` runs in reverse
+(``A → B``), so ``A → B`` via ``R5`` reversed, then ``B → C → A`` via ``R2``
+and ``R3``. A coefficient of ``-1.0`` is the reaction running against the
+direction its stoichiometry is written in, not a different reaction.
+
+Note that a TIC made entirely of reversible reactions is also feasible in
+the reverse direction, so its mirror image is recorded rather than searched
+for — which is why each of the three appears twice.
 
 Reference
 ---------
