@@ -1,10 +1,41 @@
 Constructing a context-specific model
 =====================================
 
+A network small enough to check by hand
+---------------------------------------
+
+Four internal reactions over four metabolites, plus two exchange reactions.
+Every one of them is reversible, so the arrow is only the reference
+direction — the one a positive flux runs in. ``R1``, ``R2`` and ``R3`` can
+form the cycle ``A → B → C → A``, which is a TIC; ``R4`` drains ``A`` to
+``D``, which the network can export:
+
+.. code-block:: python
+
+   from cobra import Model, Metabolite, Reaction
+
+   model = Model("toy")          # "toy" is just the model id
+   A, B, C, D = (Metabolite(x) for x in "ABCD")
+
+   reactions = []
+   for rid, stoichiometry in (("R1", {A: -1, B: 1}),
+                              ("R2", {B: -1, C: 1}),
+                              ("R3", {C: -1, A: 1}),
+                              ("R4", {A: -1, D: 1})):
+       r = Reaction(rid, lower_bound=-1000, upper_bound=1000)
+       r.add_metabolites(stoichiometry)
+       reactions.append(r)
+   for rid, met in (("EX_A", A), ("EX_D", D)):
+       r = Reaction(rid, lower_bound=-1000, upper_bound=1000)
+       r.add_metabolites({met: -1})
+       reactions.append(r)
+   model.add_reactions(reactions)
+   model.solver = "gurobi"
+
 Keeping the core without inheriting the TICs
 --------------------------------------------
 
-On the network from :doc:`cycles`, ask for a CSM that keeps ``R4``:
+Ask for a CSM that keeps ``R4`` as its core:
 
 .. code-block:: python
 
@@ -14,6 +45,14 @@ On the network from :doc:`cycles`, ask for a CSM that keeps ``R4``:
    ['EX_A', 'EX_D', 'R4']
    >>> blocked_core
    []
+
+Three reactions survive, and ``B`` and ``C`` drop out with the TIC that was
+the only thing touching them:
+
+.. code-block:: python
+
+   >>> sorted(m.id for m in extracted.metabolites)
+   ['A', 'D']
 
 The TIC is gone. It could have been retained — ``R1``, ``R2`` and ``R3``
 are flux consistent, and an extraction requiring only flux consistency might
