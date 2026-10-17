@@ -3,3 +3,6 @@ sphinx-rtd-theme>=2.0
 cobra>=0.29
 numpy>=1.21
 optlang>=1.8
+# Not on PyPI; installed from git so the later `pip install .` step (which
+# depends on it by name only) finds it already satisfied.
+spectra-cobra @ git+https://github.com/bisect-group/spectra-cobra.git
