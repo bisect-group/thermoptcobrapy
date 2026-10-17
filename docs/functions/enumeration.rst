@@ -9,9 +9,9 @@ Usage
 
 .. code-block:: python
 
-   from thermoptcobrapy import thermopt_enum_lp
+   from thermoptcobrapy import thermopt_enum_milp
 
-   cycles, directions, cycle_rxns, oriented = thermopt_enum_lp(model)
+   cycles, directions, cycle_rxns, oriented = thermopt_enum_milp(model)
 
    for cycle, direction in zip(cycles, directions):
        print(cycle, direction)
@@ -23,54 +23,36 @@ what :doc:`thermopt_flux` consumes.
 Where the cycles are looked for
 -------------------------------
 
-Both enumerators begin by closing the model: every exchange reaction is
-pinned shut and every positive lower bound released. With nothing entering or
+The enumerator begins by closing the model: every exchange reaction is pinned
+shut and every positive lower bound released. With nothing entering or
 leaving, the only flux a steady state can carry is flux that goes round in a
 circle, so whatever stays flux consistent under those conditions is exactly
-what can take part in a cycle. That is a consistency check, which is why the
-implementation reaches for SPECTRA and falls back to ``fastcc``.
+what can take part in a cycle. That is a consistency check, done with
+SPECTRA.
 
 The model handed back has its exchanges *open* — it is the oriented model the
 cycles refer to, not the closed one they were found in.
 
-Two enumerators
----------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 24 38 38
-
-   * -
-     - ``thermopt_enum_lp``
-     - ``thermopt_enum_milp``
-   * - Objective
-     - smallest one-norm of flux
-     - fewest active reactions
-   * - Cost
-     - lower
-     - higher
-   * - Cycles returned
-     - may carry passengers
-     - tighter
-
-``thermopt_enum_lp`` forces one reaction to carry flux and minimises
-:math:`\|v\|_1`, which lands on a short cycle through it. It then blocks each
-of that cycle's other reactions in turn and repeats, so cycles sharing
-reactions are all reached; the recursion is memoised on the set of blocked
-reactions.
+How it works
+------------
 
 ``thermopt_enum_milp`` minimises the *number* of active reactions, which is
-the cycle one actually wants, and excludes each cycle it finds with a no-good
-cut so the next solve must produce a different one.
+the cycle one actually wants, rather than a cycle plus whatever else a solver
+happened to leave switched on. It forces one reaction to carry flux, solves
+for the smallest cycle through it, and excludes that cycle with a no-good cut
+so the next solve must produce a different one. Each cycle found also narrows
+the model the next solve runs on, to just that cycle's own reactions, which is
+what keeps the repeated solves cheap.
 
-Both run at a flux threshold of 1. In a closed network the scale of a cycle
-is arbitrary; only its support matters.
+It runs at a flux threshold of 1. In a closed network the scale of a cycle is
+arbitrary; only its support matters. It needs a real mixed-integer solver:
+Gurobi or CPLEX.
 
 A worked example
 ----------------
 
 Take ``A→B→C→A`` with an extra ``B→A``. There are three cycles, each in two
-directions, and both enumerators find all six:
+directions, and the enumerator finds all six:
 
 .. code-block:: text
 
@@ -87,8 +69,6 @@ backwards too, so its mirror image is recorded rather than searched for.
 
 Reference
 ---------
-
-.. autofunction:: thermoptcobrapy.thermopt_enum_lp
 
 .. autofunction:: thermoptcobrapy.thermopt_enum_milp
 

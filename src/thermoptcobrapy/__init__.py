@@ -14,8 +14,8 @@ This package offers four ways at them:
 
 1. :func:`thermopt_cc` reports, for every reaction, which directions it can
    carry flux in once cycling is excluded.
-2. :func:`thermopt_enum_lp` and :func:`thermopt_enum_milp` list the cycles
-   themselves, with the relative flux through each reaction.
+2. :func:`thermopt_enum_milp` lists the cycles themselves, with the relative
+   flux through each reaction.
 3. :func:`thermopt_flux` takes the cycling back out of a flux distribution
    that already has it.
 4. :func:`thermoptics` extracts a context-specific model that is
@@ -46,7 +46,7 @@ from .consistency import (
     thermopt_cc,
 )
 from .context import thermoptics
-from .enumeration import reaction_order, thermopt_enum_lp, thermopt_enum_milp
+from .enumeration import reaction_order, thermopt_enum_milp
 from .exceptions import (
     ThermOptError,
     ThermOptInfeasibleCoreError,
@@ -67,7 +67,6 @@ __all__ = (
     "REVERSE",
     "REVERSIBLE",
     # Cycle enumeration.
-    "thermopt_enum_lp",
     "thermopt_enum_milp",
     "reaction_order",
     # Flux correction.

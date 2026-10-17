@@ -1,21 +1,12 @@
 """Enumerating a model's thermodynamically infeasible cycles.
 
-Two routines, answering the same question with different machinery.
+``thermopt_enum_milp`` minimises the *number* of active reactions in a cycle
+sub-model and excludes each cycle it finds with a no-good cut, so the next
+solve has to produce a different one. It needs a real mixed-integer solver.
 
-``thermopt_enum_lp`` forces one reaction of the cycle sub-model to carry flux
-and minimises the one-norm of the result, which lands on a short cycle through
-that reaction. It then blocks each of the cycle's other reactions in turn and
-repeats, so that cycles sharing reactions are all reached. The recursion is
-memoised on the set of blocked reactions.
-
-``thermopt_enum_milp`` minimises the *number* of active reactions instead,
-which is the cycle one really wants, and excludes each cycle it finds with a
-no-good cut so the next solve has to produce a different one. It is the more
-exact of the two and the more expensive.
-
-Both work on the cycle sub-model: exchanges shut, positive lower bounds
-released, so the only flux left is cycling. Both run at a flux threshold of
-1, since in a closed network the scale of a cycle is arbitrary and only its
+It works on the cycle sub-model: exchanges shut, positive lower bounds
+released, so the only flux left is cycling. It runs at a flux threshold of 1,
+since in a closed network the scale of a cycle is arbitrary and only its
 support matters.
 """
 
@@ -180,64 +171,6 @@ def _force(reaction, direction: float, magnitude: float) -> bool:
     return True
 
 
-def _min_norm_cycle(model: "Model") -> Optional[Dict[str, float]]:
-    """Return the flux distribution of least one-norm, or None.
-
-    Parameters
-    ----------
-    model : cobra.Model
-        The model to solve on, already forced. Left unchanged.
-
-    Returns
-    -------
-    dict of {str: float} or None
-        The fluxes, or None when the problem is infeasible.
-
-    """
-    prob = model.problem
-    to_add, coefficients, norm_vars = [], [], []
-    for reaction in model.reactions:
-        norm = prob.Variable(f"to_abs_{reaction.id}", lb=0.0)
-        norm_vars.append(norm)
-        to_add.append(norm)
-        upper = prob.Constraint(Zero, name=f"to_absu_{reaction.id}", lb=0.0)
-        lower = prob.Constraint(Zero, name=f"to_absl_{reaction.id}", lb=0.0)
-        to_add.extend([upper, lower])
-        coefficients.append(
-            (
-                upper,
-                {
-                    norm: 1.0,
-                    reaction.forward_variable: -1.0,
-                    reaction.reverse_variable: 1.0,
-                },
-            )
-        )
-        coefficients.append(
-            (
-                lower,
-                {
-                    norm: 1.0,
-                    reaction.forward_variable: 1.0,
-                    reaction.reverse_variable: -1.0,
-                },
-            )
-        )
-
-    with model:
-        model.add_cons_vars(to_add)
-        model.solver.update()
-        for constraint, terms in coefficients:
-            constraint.set_linear_coefficients(terms)
-        to_add.reverse()
-        model.objective = prob.Objective(Zero, direction="min")
-        model.objective.set_linear_coefficients({v: 1.0 for v in norm_vars})
-        model.solver.optimize()
-        if model.solver.status not in USABLE:
-            return None
-        return {rxn.id: rxn.flux for rxn in model.reactions}
-
-
 def _support(fluxes: Dict[str, float], order: Sequence[str]) -> List[str]:
     """Return the reactions carrying flux, in the given order.
 
@@ -256,149 +189,6 @@ def _support(fluxes: Dict[str, float], order: Sequence[str]) -> List[str]:
     """
     cutoff = CYCLE_TOL * SUPPORT_FRACTION
     return [rxn_id for rxn_id in order if abs(fluxes.get(rxn_id, 0.0)) >= cutoff]
-
-
-def _distinct(cycles: List[List[str]]) -> List[int]:
-    """Return the indices of the cycles worth keeping.
-
-    Parameters
-    ----------
-    cycles : list of list of str
-        The cycles found, in the order they were found.
-
-    Returns
-    -------
-    list of int
-        The positions to keep.
-
-    Notes
-    -----
-    A cycle is dropped when one already kept is a subset of it, which is the
-    MATLAB's ``getUniqueArrays``. The shorter cycle is the real one; the
-    longer is it plus whatever else the solver left switched on.
-
-    """
-    kept: List[int] = []
-    kept_sets: List[Set[str]] = []
-    for index, cycle in enumerate(cycles):
-        candidate = set(cycle)
-        if any(existing <= candidate for existing in kept_sets):
-            continue
-        kept.append(index)
-        kept_sets.append(candidate)
-    return kept
-
-
-def _all_cycles_through(
-    model: "Model",
-    core_id: str,
-    blocked: Tuple[str, ...],
-    direction: float,
-    cache: Set[Tuple[str, ...]],
-) -> Tuple[List[List[str]], List[List[float]]]:
-    """Find every cycle through one reaction, blocking the others in turn.
-
-    Parameters
-    ----------
-    model : cobra.Model
-        The cycle sub-model. Left unchanged.
-    core_id : str
-        The reaction the cycle has to pass through.
-    blocked : tuple of str
-        Reactions pinned shut for this branch of the search.
-    direction : float
-        1 or -1, the direction `core_id` is forced in.
-    cache : set of tuple of str
-        The blocked sets already explored, shared across the recursion.
-
-    Returns
-    -------
-    tuple of (list of list of str, list of list of float)
-        The cycles and the flux through each of their reactions.
-
-    """
-    key = tuple(sorted(blocked))
-    if key in cache:
-        return [], []
-    cache.add(key)
-
-    order = [rxn.id for rxn in model.reactions]
-    with model:
-        for rxn_id in blocked:
-            model.reactions.get_by_id(rxn_id).bounds = (0.0, 0.0)
-        if not _force(model.reactions.get_by_id(core_id), direction, CYCLE_TOL):
-            return [], []
-        fluxes = _min_norm_cycle(model)
-
-    if fluxes is None:
-        return [], []
-    support = _support(fluxes, order)
-    if core_id not in support:
-        return [], []
-
-    cycles = [support]
-    directions = [[fluxes[rxn_id] for rxn_id in support]]
-    for rxn_id in support:
-        if rxn_id == core_id:
-            continue
-        deeper, deeper_dir = _all_cycles_through(
-            model, core_id, blocked + (rxn_id,), direction, cache
-        )
-        cycles.extend(deeper)
-        directions.extend(deeper_dir)
-    return cycles, directions
-
-
-def thermopt_enum_lp(
-    model: "Model", tol: float = CYCLE_TOL
-) -> Tuple[List[List[str]], List[List[float]], List[str], "Model"]:
-    """Enumerate the infeasible cycles of a model by linear programming.
-
-    Parameters
-    ----------
-    model : cobra.Model
-        The model to search. It is left unchanged.
-    tol : float, optional
-        The flux threshold used for the internal consistency check
-        (default 1).
-
-    Returns
-    -------
-    tuple of (list of list of str, list of list of float, list of str, cobra.Model)
-        The cycles, the relative flux of each of their reactions, every
-        reaction that takes part in any cycle, and the oriented working model
-        the first three refer to.
-
-    """
-    working = _prepare_for_enumeration(model)
-    closed = _close_exchanges(working)
-    cycling = consistent_reaction_ids(closed, tol)
-    if not cycling:
-        return [], [], [], working
-
-    cycle_rxns = [rxn.id for rxn in working.reactions if rxn.id in cycling]
-    search = subset_model(closed, cycling)
-    order = reaction_order(search)
-
-    cycles: List[List[str]] = []
-    directions: List[List[float]] = []
-
-    while order:
-        head = order[0]
-        for direction in (1.0, -1.0):
-            found, found_dir = _all_cycles_through(search, head, (), direction, set())
-            keep = _distinct(found)
-            cycles.extend(found[i] for i in keep)
-            directions.extend(found_dir[i] for i in keep)
-
-        search.reactions.get_by_id(head).bounds = (0.0, 0.0)
-        still = consistent_reaction_ids(search, tol)
-        search = subset_model(search, still)
-        order = [rxn_id for rxn_id in order if rxn_id in still]
-        logger.debug("%d reactions left to enumerate", len(order))
-
-    logger.info("found %d cycles over %d reactions", len(cycles), len(cycle_rxns))
-    return cycles, directions, cycle_rxns, working
 
 
 def _cycle_milp(
@@ -604,9 +394,8 @@ def thermopt_enum_milp(
     Notes
     -----
     Minimising the number of active reactions gives the cycles themselves,
-    rather than a cycle plus whatever else the solver happened to leave on,
-    so this returns tighter cycles than :func:`thermopt_enum_lp` at a higher
-    cost. Requires a real mixed-integer solver: Gurobi or CPLEX.
+    rather than a cycle plus whatever else the solver happened to leave on.
+    Requires a real mixed-integer solver: Gurobi or CPLEX.
 
     """
     working = _prepare_for_enumeration(model)

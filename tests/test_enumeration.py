@@ -1,10 +1,9 @@
-"""Test the cycle enumerators."""
+"""Test the cycle enumerator."""
 
 import numpy as np
-import pytest
 from cobra.util.array import create_stoichiometric_matrix
 
-from thermoptcobrapy import reaction_order, thermopt_enum_lp, thermopt_enum_milp
+from thermoptcobrapy import reaction_order, thermopt_enum_milp
 from thermoptcobrapy.enumeration import _close_exchanges
 
 from .conftest import milp
@@ -26,11 +25,10 @@ def _as_sets(cycles, directions):
     return out
 
 
-@pytest.mark.parametrize("enumerate_cycles", [thermopt_enum_lp, thermopt_enum_milp])
 @milp
-def test_a_single_cycle_is_found_both_ways(cycle_model, enumerate_cycles):
+def test_a_single_cycle_is_found_both_ways(cycle_model):
     """Test that the loop is found running forwards and backwards."""
-    cycles, directions, cycle_rxns, _ = enumerate_cycles(cycle_model)
+    cycles, directions, cycle_rxns, _ = thermopt_enum_milp(cycle_model)
 
     assert cycle_rxns == ["R1", "R2", "R3"]
     assert _as_sets(cycles, directions) == {
@@ -39,16 +37,15 @@ def test_a_single_cycle_is_found_both_ways(cycle_model, enumerate_cycles):
     }
 
 
-@pytest.mark.parametrize("enumerate_cycles", [thermopt_enum_lp, thermopt_enum_milp])
 @milp
-def test_overlapping_cycles_are_all_found(double_cycle_model, enumerate_cycles):
+def test_overlapping_cycles_are_all_found(double_cycle_model):
     """Test that every cycle of the network is reported, not just a basis.
 
     With ``R5`` added there are three cycles, each in two directions: the two
     short loops and the composite that runs ``R5`` against the others.
 
     """
-    cycles, directions, _, _ = enumerate_cycles(double_cycle_model)
+    cycles, directions, _, _ = thermopt_enum_milp(double_cycle_model)
 
     assert _as_sets(cycles, directions) == {
         (("R1", 1.0), ("R5", 1.0)),
@@ -60,11 +57,10 @@ def test_overlapping_cycles_are_all_found(double_cycle_model, enumerate_cycles):
     }
 
 
-@pytest.mark.parametrize("enumerate_cycles", [thermopt_enum_lp, thermopt_enum_milp])
 @milp
-def test_an_acyclic_model_yields_nothing(acyclic_model, enumerate_cycles):
+def test_an_acyclic_model_yields_nothing(acyclic_model):
     """Test that a network without cycles reports none."""
-    cycles, directions, cycle_rxns, _ = enumerate_cycles(acyclic_model)
+    cycles, directions, cycle_rxns, _ = thermopt_enum_milp(acyclic_model)
 
     assert cycles == [] and directions == [] and cycle_rxns == []
 
@@ -72,7 +68,7 @@ def test_an_acyclic_model_yields_nothing(acyclic_model, enumerate_cycles):
 @milp
 def test_reported_cycles_are_steady_state_modes(double_cycle_model):
     """Test that each cycle balances every metabolite it touches."""
-    cycles, directions, _, working = thermopt_enum_lp(double_cycle_model)
+    cycles, directions, _, working = thermopt_enum_milp(double_cycle_model)
     closed = _close_exchanges(working)
     stoichiometry = np.asarray(create_stoichiometric_matrix(closed, array_type="dense"))
     position = {rxn.id: i for i, rxn in enumerate(closed.reactions)}
@@ -93,7 +89,7 @@ def test_the_returned_model_keeps_its_exchanges_open(cycle_model):
     back is the one the caller works with, which still has them.
 
     """
-    _, _, _, working = thermopt_enum_lp(cycle_model)
+    _, _, _, working = thermopt_enum_milp(cycle_model)
 
     assert working.reactions.EX_A.bounds != (0.0, 0.0)
 

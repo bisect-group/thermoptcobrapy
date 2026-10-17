@@ -46,8 +46,8 @@ Enumerating it
 
 .. code-block:: python
 
-   >>> from thermoptcobrapy import thermopt_enum_lp
-   >>> cycles, directions, cycle_rxns, oriented = thermopt_enum_lp(model)
+   >>> from thermoptcobrapy import thermopt_enum_milp
+   >>> cycles, directions, cycle_rxns, oriented = thermopt_enum_milp(model)
    >>> cycle_rxns
    ['R1', 'R2', 'R3']
    >>> for c, d in zip(cycles, directions):

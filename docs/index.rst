@@ -22,7 +22,7 @@ At a glance
 .. code-block:: python
 
    from cobra.io import load_model
-   from thermoptcobrapy import thermopt_cc, thermopt_enum_lp
+   from thermoptcobrapy import thermopt_cc, thermopt_enum_milp
 
    model = load_model("textbook")
 
@@ -30,7 +30,7 @@ At a glance
    verdicts, oriented = thermopt_cc(model, tol=1e-4)
 
    # Which cycles does the model contain?
-   cycles, directions, cycle_rxns, oriented = thermopt_enum_lp(model)
+   cycles, directions, cycle_rxns, oriented = thermopt_enum_milp(model)
 
 Note that both return the model the answers refer to. Reactions restricted to
 negative flux are re-oriented first, so "forward" means something different
@@ -64,8 +64,7 @@ Which function do I want?
   usable only by cycling, use :doc:`functions/thermopt_cc`. It is strictly
   stronger than flux consistency: on the *E. coli* models tested it blocked
   130 to 242 reactions beyond what FVA-style consistency rejects.
-* To see the cycles, use :doc:`functions/enumeration`. The LP enumerator is
-  the cheaper; the MILP one returns tighter cycles.
+* To see the cycles, use :doc:`functions/enumeration`.
 * To clean up an FBA or sampling result you already have, use
   :doc:`functions/thermopt_flux`.
 * To build a context-specific model without inheriting the cycles of the

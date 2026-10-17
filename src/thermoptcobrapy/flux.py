@@ -51,8 +51,7 @@ def thermopt_flux(
         The flux of every reaction, as FBA or sampling produced it.
     cycles : sequence of sequence of str
         The cycles, each a list of reaction identifiers. This is what
-        :func:`~thermoptcobrapy.enumeration.thermopt_enum_lp` and its
-        mixed-integer sibling return.
+        :func:`~thermoptcobrapy.enumeration.thermopt_enum_milp` returns.
     directions : sequence of sequence of float
         The relative flux coefficient of each reaction in the matching cycle,
         element for element with `cycles`.

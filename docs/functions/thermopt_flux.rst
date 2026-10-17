@@ -9,9 +9,9 @@ Usage
 
 .. code-block:: python
 
-   from thermoptcobrapy import thermopt_enum_lp, thermopt_flux
+   from thermoptcobrapy import thermopt_enum_milp, thermopt_flux
 
-   cycles, directions, _, oriented = thermopt_enum_lp(model)
+   cycles, directions, _, oriented = thermopt_enum_milp(model)
    solution = oriented.optimize()
 
    corrected = thermopt_flux(solution.fluxes, cycles, directions)

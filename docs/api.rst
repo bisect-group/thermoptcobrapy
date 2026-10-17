@@ -16,8 +16,6 @@ Consistency
 Cycle enumeration
 -----------------
 
-.. autofunction:: thermoptcobrapy.thermopt_enum_lp
-   :no-index:
 .. autofunction:: thermoptcobrapy.thermopt_enum_milp
    :no-index:
 .. autofunction:: thermoptcobrapy.reaction_order
