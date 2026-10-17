@@ -47,7 +47,7 @@ def thermopt_cc(
     time_limit: float = INITIAL_TIME_LIMIT,
     max_time_limit: float = MAX_TIME_LIMIT,
 ) -> Tuple[Dict[str, str], "Model"]:
-    """Find the thermodynamically feasible flux directions of every reaction.
+    """Detect the stoichiometrically and thermodynamically blocked reactions.
 
     Parameters
     ----------
@@ -57,8 +57,9 @@ def thermopt_cc(
         The flux a reaction has to reach to count as carrying flux
         (default 1e-4).
     get_direction : bool, optional
-        Whether to report which directions are feasible rather than only
-        whether the reaction is blocked (default False). Reporting directions
+        Whether to report the thermodynamically feasible flux direction of
+        each reaction rather than only whether it is blocked (default False,
+        which reports ``"Blocked"``/``"Unblocked"``). Reporting directions
         costs roughly twice the work, because the reversible reactions are
         split and each half is tested separately.
     seed : int, optional

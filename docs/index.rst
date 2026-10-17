@@ -52,9 +52,9 @@ What is in the package
    * - Function
      - Does
    * - :doc:`functions/thermopt_cc`
-     - Determines the thermodynamically feasible flux directions of every
-       reaction, and thereby the stoichiometrically and thermodynamically
-       blocked reactions
+     - Detects the stoichiometrically and thermodynamically blocked
+       reactions (and, on request, the thermodynamically feasible flux
+       direction of every reaction)
    * - :doc:`functions/enumeration`
      - Enumerates all TICs of a model and the flux direction of the
        reactions involved

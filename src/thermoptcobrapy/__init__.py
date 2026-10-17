@@ -14,9 +14,9 @@ context-specific model built on a network that still contains them.
 
 This package offers four ways at them:
 
-1. :func:`thermopt_cc` determines the thermodynamically feasible flux
-   directions of every reaction, and thereby the stoichiometrically and
-   thermodynamically blocked reactions.
+1. :func:`thermopt_cc` detects the stoichiometrically and thermodynamically
+   blocked reactions (and, with ``get_direction=True``, the thermodynamically
+   feasible flux direction of every reaction).
 2. :func:`thermopt_enum_milp` enumerates all TICs of a model and the flux
    direction of the reactions involved.
 3. :func:`thermopt_flux` detects and removes loops from a flux distribution,

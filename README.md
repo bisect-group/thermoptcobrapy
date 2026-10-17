@@ -21,7 +21,7 @@ ThermOpt addresses them in four ways:
 
 | Routine | What it does |
 |---|---|
-| `thermopt_cc` | Determines the thermodynamically feasible flux directions of every reaction, and thereby the stoichiometrically and thermodynamically blocked reactions |
+| `thermopt_cc` | Detects the stoichiometrically and thermodynamically blocked reactions (and, on request, the thermodynamically feasible flux direction of every reaction) |
 | `thermopt_enum_milp` | Enumerates all TICs of a model and the flux direction of the reactions involved |
 | `thermopt_flux` | Detects and removes loops from a flux distribution, projecting it to the nearest distribution in the thermodynamically feasible flux space |
 | `thermoptics` | Constructs a thermodynamically consistent context-specific model (CSM) |

@@ -1,8 +1,9 @@
 thermopt_cc
 ===========
 
-Determines the thermodynamically feasible flux directions of every reaction,
-and thereby the stoichiometrically and thermodynamically blocked reactions.
+Detects the stoichiometrically and thermodynamically blocked reactions of a
+model (and, with ``get_direction=True``, the thermodynamically feasible flux
+direction of every reaction).
 
 Usage
 -----
