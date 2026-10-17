@@ -53,6 +53,27 @@ reaction then makes the program infeasible, and
 :class:`~thermoptcobrapy.ThermOptInfeasibleCoreError` is raised rather than
 something wrong being returned.
 
+``seed`` and ``time_limit``
+----------------------------
+
+.. code-block:: python
+
+   extracted, blocked_core = thermoptics(
+       model, core=["PGI", "PFK", "FBA"], tol=1e-4, seed=0, time_limit=120
+   )
+
+``seed`` makes a run reproducible, the same as in :doc:`thermopt_cc`: it
+seeds both the consistency pre-check (when ``do_tocc=True``) and Fast-SNP.
+
+``time_limit`` (default 120) is the budget given to *each* mixed-integer
+solve — there are two per round, one finding which core reactions can be
+active together and one finding the cheapest supporting network — and it is
+fixed, not grown the way :doc:`thermopt_cc`'s is. A solve that times out
+before finding any usable solution surfaces as
+:class:`~thermoptcobrapy.ThermOptInfeasibleCoreError`, with the solver status
+quoted in the message; when that status is a timeout rather than a proven
+infeasibility, raising ``time_limit`` is the fix, not ``do_tocc``.
+
 What comes back
 ---------------
 

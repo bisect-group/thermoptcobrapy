@@ -60,13 +60,18 @@ def thermopt_cc(
         costs roughly twice the work, because the reversible reactions are
         split and each half is tested separately.
     seed : int, optional
-        A seed for Fast-SNP's random weights (default None).
+        A seed for the randomisation in both the consistency pre-check
+        (SPECTRA's own) and Fast-SNP's random weights (default None).
     time_limit : float, optional
-        Seconds allowed for the first mixed-integer solve (default 120).
+        Seconds allowed for the first mixed-integer solve of each round
+        (default 120). Every round settles at least one reaction or this
+        limit grows; it never shrinks back down within one call.
     max_time_limit : float, optional
-        The ceiling the limit grows to when a solve times out having found
-        nothing (default 3600). The MATLAB grows it without limit; stopping
-        here turns an unsolvable model into a result rather than a hang.
+        The ceiling `time_limit` grows to, by `TIME_LIMIT_STEP` seconds each
+        time a solve times out having settled nothing new (default 3600).
+        The MATLAB grows it without limit; this stops instead and raises, so
+        an unsolvable model fails loudly rather than hanging or being
+        reported as a result it was never proven to be.
 
     Returns
     -------
@@ -76,6 +81,17 @@ def thermopt_cc(
         bounds clamped. Verdicts are ``"Blocked"``/``"Unblocked"``, or with
         `get_direction` one of ``"Blocked"``, ``"Forward"``, ``"Reverse"``,
         ``"Reversible"``.
+
+    Raises
+    ------
+    ThermOptError
+        If the consistency program is infeasible outright -- typically a
+        forced lower bound whose stoichiometry leaves no reaction room to be
+        either exactly zero or at least `tol`.
+    ThermOptTimeLimitError
+        If a solve is still timing out once `time_limit` has grown to
+        `max_time_limit`, with reactions left unsettled. Raise
+        `max_time_limit`, or loosen `tol` so each solve is cheaper.
 
     Notes
     -----

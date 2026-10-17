@@ -73,7 +73,11 @@ def thermoptics(
     ThermOptInfeasibleCoreError
         If no thermodynamically feasible flux distribution activates any of
         the remaining core reactions. With `do_tocc` left on this should not
-        happen, since the blocked ones have already been removed.
+        happen, since the blocked ones have already been removed. Unlike
+        :func:`thermopt_cc`, a solve that merely times out before finding an
+        incumbent is reported this way too, with the solver status in the
+        message -- raising `time_limit` is the fix in that case, not
+        `do_tocc`.
 
     Notes
     -----

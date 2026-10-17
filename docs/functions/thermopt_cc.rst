@@ -22,6 +22,37 @@ search drops a reaction as soon as it is shown to carry flux, so without the
 split a reaction proved to run forward would never be asked whether it can
 also run backward.
 
+``seed``, ``time_limit`` and ``max_time_limit``
+------------------------------------------------
+
+.. code-block:: python
+
+   verdicts, oriented = thermopt_cc(
+       model, tol=1e-4, seed=0, time_limit=120, max_time_limit=3600
+   )
+
+``seed`` makes a run reproducible. Both the consistency pre-check (SPECTRA's
+own randomisation) and Fast-SNP's random projection weights use it, so the
+same seed on the same model gives the same verdicts and the same basis every
+time. Leave it unset and the search still gives a correct answer, just not
+necessarily the same cycle basis from one run to the next.
+
+The search settles reactions in rounds, each one a mixed-integer solve over
+the reactions not yet settled. A round is given ``time_limit`` seconds
+(default 120); if it times out having settled nothing new, the limit grows by
+60s and the same round is solved again with the longer budget. This keeps a
+slow model progressing rather than failing on the first solve that needed
+slightly longer.
+
+That growth stops at ``max_time_limit`` (default 3600). If a solve is still
+timing out with reactions left unsettled once the ceiling is reached,
+:class:`~thermoptcobrapy.ThermOptTimeLimitError` is raised rather than
+reporting the unsettled reactions as ``Blocked``. The MATLAB has no such
+ceiling — it grows the limit forever — but a result that was never proven is
+not a result, so this fails loudly instead of either hanging or guessing.
+Raise ``max_time_limit`` on a model that genuinely needs longer, or loosen
+``tol`` so each solve is cheaper.
+
 Why the model comes back
 ------------------------
 
