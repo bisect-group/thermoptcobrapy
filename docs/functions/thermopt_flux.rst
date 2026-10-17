@@ -1,8 +1,8 @@
 thermopt_flux
 =============
 
-Takes the infeasible cycling back out of a flux distribution that already
-has it.
+Detects and removes loops from a flux distribution, projecting it to the
+nearest distribution in the thermodynamically feasible flux space.
 
 Usage
 -----
@@ -22,14 +22,16 @@ as ``solution.fluxes`` is, works directly.
 How it works
 ------------
 
-A flux vector from FBA or from sampling satisfies the mass balance but may
-carry any amount of flux round a cycle, because nothing in the problem
-charges for it. For each cycle, if the distribution runs **every** one of its
-reactions the way the cycle does, a scaled copy of the cycle is subtracted.
+A flux distribution from FBA or from flux sampling satisfies the mass
+balance, but may carry any amount of flux through a TIC, because nothing in
+the problem penalises it. For each TIC, if the distribution runs **every**
+one of its reactions in the TIC's own direction, a scaled copy of the TIC is
+subtracted.
 
 The amount removed is set by the reaction carrying the least flux, so that
-one lands exactly on zero. Taking more would push it through zero into the
-opposite direction, which would be inventing flux rather than removing it:
+one lands exactly on zero. Removing more would push it through zero into the
+opposite direction, which would alter the net flux rather than only remove
+the loop:
 
 .. code-block:: python
 
@@ -37,7 +39,8 @@ opposite direction, which would be inventing flux rather than removing it:
    ...               [["R1", "R2", "R3"]], [[1.0, 1.0, 1.0]])
    {'R1': 2.0, 'R2': 0.0, 'R3': 1.0}
 
-A cycle whose reactions are not all running its way is left alone entirely:
+A TIC whose reactions are not all running in its direction is left
+unchanged:
 
 .. code-block:: python
 
@@ -45,13 +48,13 @@ A cycle whose reactions are not all running its way is left alone entirely:
    ...               [["R1", "R2", "R3"]], [[1.0, 1.0, 1.0]])
    {'R1': 5.0, 'R2': 5.0, 'R3': -5.0}
 
-What it looks like on a real model
-----------------------------------
+On a genome-scale model
+-----------------------
 
-Most FBA optima do not load a cycle, and on those this is a no-op — which is
-the correct answer, not a failure. Drive one deliberately and the effect is
-unmistakable. Maximising ``ADK1`` (adenylate kinase, a textbook infeasible
-cycle) on a 1523-reaction *E. coli* model:
+Most FBA optima carry no loop, and on those this is a no-op — which is the
+correct result, not a failure. Drive one deliberately and the effect is
+unmistakable. Maximising ``ADK1`` (adenylate kinase, a reaction well known
+to participate in a TIC) on a 1523-reaction *E. coli* model:
 
 .. list-table::
    :header-rows: 1
@@ -70,8 +73,8 @@ cycle) on a 1523-reaction *E. coli* model:
      - 0
      - 0
 
-The distribution was pure cycling, and the correction removes it without
-disturbing the mass balance.
+The whole distribution was loop flux, and the correction removes it while
+the mass balance continues to hold.
 
 Reference
 ---------
@@ -84,3 +87,4 @@ See also
 --------
 
 * :doc:`enumeration` — where ``cycles`` and ``directions`` come from
+* :doc:`thermopt_cc` — the blocked reactions behind the TICs

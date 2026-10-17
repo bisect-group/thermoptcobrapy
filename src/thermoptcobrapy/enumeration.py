@@ -1,13 +1,13 @@
-"""Enumerating a model's thermodynamically infeasible cycles.
+"""Enumerating a model's thermodynamically infeasible cycles (TICs).
 
 ``thermopt_enum_milp`` minimises the *number* of active reactions in a cycle
-sub-model and excludes each cycle it finds with a no-good cut, so the next
+sub-model and excludes each TIC it finds with a no-good cut, so the next
 solve has to produce a different one. It needs a real mixed-integer solver.
 
 It works on the cycle sub-model: exchanges shut, positive lower bounds
-released, so the only flux left is cycling. It runs at a flux threshold of 1,
-since in a closed network the scale of a cycle is arbitrary and only its
-support matters.
+released, so any non-zero flux left is cycling flux. It runs at a flux
+threshold of 1, since in a closed network the scale of a TIC is arbitrary and
+only the reactions involved and their relative flux coefficients matter.
 """
 
 from logging import getLogger
@@ -44,11 +44,12 @@ def _prepare_for_enumeration(model: "Model") -> "Model":
     Returns
     -------
     cobra.Model
-        A copy with the reverse-only reactions oriented forward, every
-        positive lower bound released and the extreme bounds clamped. The
-        exchanges are left open: this is the model the returned cycles refer
-        to, and it is what the MATLAB keeps as ``modModel``. Closing the
-        exchanges is a separate step, done to the copy the search runs on.
+        A copy in which the reactions irreversible in the reverse direction
+        have been converted to forward irreversible reactions, every positive
+        lower bound released and the extreme bounds clamped. The exchanges
+        are left open: this is the model the returned TICs refer to, and it
+        is what the MATLAB keeps as ``modModel``. Closing the exchanges is a
+        separate step, done to the copy the search runs on.
 
     """
     working = model.copy()
@@ -72,8 +73,8 @@ def _close_exchanges(model: "Model") -> "Model":
     Returns
     -------
     cobra.Model
-        A copy in which nothing enters or leaves, so the only flux it can
-        carry is cycling.
+        A copy with no input or output of nutrients, so any non-zero flux it
+        can carry is cycling flux.
 
     """
     closed = model.copy()
@@ -373,29 +374,31 @@ def thermopt_enum_milp(
     tol: float = CYCLE_TOL,
     time_limit: Optional[float] = None,
 ) -> Tuple[List[List[str]], List[List[float]], List[str], "Model"]:
-    """Enumerate the infeasible cycles of a model by mixed-integer programming.
+    """Enumerate all TICs of a model by mixed-integer programming.
 
     Parameters
     ----------
     model : cobra.Model
-        The model to search. It is left unchanged.
+        The GEM to search. It is left unchanged.
     tol : float, optional
-        The flux threshold for the internal consistency check (default 1).
+        The flux threshold for the internal flux consistency check
+        (default 1).
     time_limit : float, optional
         Seconds allowed for each solve (default None).
 
     Returns
     -------
     tuple of (list of list of str, list of list of float, list of str, cobra.Model)
-        The cycles, the relative flux through each of their reactions
-        normalised so the smallest is 1, every reaction taking part in a
-        cycle, and the oriented working model the rest refer to.
+        The TICs, the relative flux coefficient of each of their reactions
+        normalised so the smallest is 1, the superset of all reactions taking
+        part in a TIC, and the oriented working model the rest refer to (the
+        MATLAB's ``modModel``).
 
     Notes
     -----
-    Minimising the number of active reactions gives the cycles themselves,
-    rather than a cycle plus whatever else the solver happened to leave on.
-    Requires a real mixed-integer solver: Gurobi or CPLEX.
+    Minimising the number of active reactions yields the TICs themselves,
+    rather than a TIC plus whatever else the solver happened to leave
+    switched on. Requires a real mixed-integer solver: Gurobi or CPLEX.
 
     """
     working = _prepare_for_enumeration(model)

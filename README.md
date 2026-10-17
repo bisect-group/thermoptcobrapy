@@ -5,25 +5,31 @@
 A Python port of the [ThermOptCOBRA](https://github.com/bisect-group/Protocol_ThermOptCOBRA)
 MATLAB package, built on [cobrapy](https://github.com/opencobra/cobrapy).
 
-Flux balance analysis lets flux run round in circles. A set of reactions whose
-net effect is nothing — no metabolite produced, none consumed, nothing
-exchanged with the medium — can still carry arbitrary flux at steady state,
-because the mass balance has no opinion about it. Thermodynamics does: such a
-cycle would need free energy to decrease all the way round and return to where
-it started. These are *thermodynamically infeasible cycles* (TICs), and they
-inflate fluxes, invent capabilities a cell does not have, and survive into
-context-specific models built on top of them.
+Flux balance analysis constrains a network with the mass balance alone, and
+the mass balance does not account for *thermodynamically infeasible cycles*
+(TICs). Analogous to perpetual motion machines, these cycles violate the
+second law of thermodynamics by cycling metabolites indefinitely without any
+real change.
+
+TICs lead genome-scale metabolic models (GEMs) to predict phenotypes that are
+thermodynamically infeasible, and such phenotypes carry no biological
+interpretation. FBA, FVA and flux sampling alike often predict maximum flux
+through reactions involved in TICs, and TICs are inherited by every
+context-specific model built on a network that still contains them.
 
 ThermOpt addresses them in four ways:
 
-| Routine | Question it answers |
+| Routine | What it does |
 |---|---|
-| `thermopt_cc` | In which directions can each reaction carry flux, once cycles are excluded? |
-| `thermopt_enum_milp` | Which cycles does this model contain, and in what proportions? |
-| `thermopt_flux` | Given a flux distribution, what does it look like with the cycling removed? |
-| `thermoptics` | Build a context-specific model that is thermodynamically feasible by construction. |
+| `thermopt_cc` | Determines the thermodynamically feasible flux directions of every reaction, and thereby the stoichiometrically and thermodynamically blocked reactions |
+| `thermopt_enum_milp` | Enumerates all TICs of a model and the flux direction of the reactions involved |
+| `thermopt_flux` | Detects and removes loops from a flux distribution, projecting it to the nearest distribution in the thermodynamically feasible flux space |
+| `thermoptics` | Constructs a thermodynamically consistent context-specific model (CSM) |
 
-Reference: [Thermodynamically-constrained metabolic network reconstruction](https://www.sciencedirect.com/science/article/pii/S2589004225012660).
+Reference: Pavan Kumar S. and Nirav Pravinbhai Bhatt (2025). ThermOptCobra:
+Thermodynamically optimal construction and analysis of metabolic networks for
+reliable phenotype predictions. *iScience* **28**(8), 113005.
+<https://doi.org/10.1016/j.isci.2025.113005>
 
 ## Installation
 
@@ -69,14 +75,14 @@ zero buys `ub_i * integrality` of flux for nothing. Once that reaches `tol`
 the indicators stop meaning anything.
 
 Gurobi will not accept an integrality tolerance below `1e-9`, so on a model
-whose bounds reach 1000 the smallest usable threshold is about `5e-5`. The
+whose bounds reach 1000 the smallest workable threshold is about `5e-5`. The
 package checks this up front and tells you what to use rather than returning
 a quietly wrong answer.
 
 Two consequences worth knowing:
 
-- Reactions that genuinely cannot carry `tol` are reported blocked. That is
-  the honest answer at that threshold, not a failure.
+- Reactions that cannot carry `tol` are reported blocked. That is the correct
+  result at that threshold, not a failure.
 - A model with a **forced** lower bound — a biomass reaction pinned to a
   growth rate, say — can be infeasible rather than merely restrictive. Biomass
   at 25.03 on an *E. coli* model demands trace-cofactor fluxes around `6e-5`

@@ -2,15 +2,20 @@ ThermOpt for cobrapy
 ====================
 
 Flux balance analysis constrains a network with the mass balance alone, and
-the mass balance has no opinion about flux that goes round in a circle. A set
-of reactions whose net effect is nothing — no metabolite produced, none
-consumed, nothing exchanged with the medium — can carry arbitrary flux at
-steady state. Thermodynamics forbids it: the free energy would have to fall
-all the way round the cycle and arrive back where it started.
+the mass balance does not account for thermodynamically infeasible cycles
+(TICs). Analogous to perpetual motion machines, these cycles violate the
+second law of thermodynamics by cycling metabolites indefinitely without any
+real change.
 
-These *thermodynamically infeasible cycles* are not a curiosity. They inflate
-maximum fluxes, make blocked reactions look usable, and are inherited by every
-context-specific model built on a network that still contains them.
+TICs lead genome-scale metabolic models (GEMs) to predict phenotypes that are
+thermodynamically infeasible, and such phenotypes carry no biological
+interpretation. Flux analysis methods — FBA, FVA and flux sampling alike —
+often predict maximum flux through reactions involved in TICs, which
+undermines a model's predictive capability through distorted flux
+distributions, erroneous growth and energy predictions, unreliable gene
+essentiality predictions, and compromised multi-omics integration. TICs are
+also inherited by every context-specific model built on a network that still
+contains them.
 
 ``thermoptcobrapy`` is a Python port of the `ThermOptCOBRA
 <https://github.com/bisect-group/Protocol_ThermOptCOBRA>`_ MATLAB package,
@@ -26,14 +31,15 @@ At a glance
 
    model = load_model("textbook")
 
-   # Which reactions can carry thermodynamically feasible flux?
+   # Thermodynamically feasible flux directions, and the blocked reactions
    verdicts, oriented = thermopt_cc(model, tol=1e-4)
 
-   # Which cycles does the model contain?
+   # Enumerate the TICs of the model
    cycles, directions, cycle_rxns, oriented = thermopt_enum_milp(model)
 
-Note that both return the model the answers refer to. Reactions restricted to
-negative flux are re-oriented first, so "forward" means something different
+Note that both return the model the answers refer to. Reactions irreversible
+in the reverse direction (``lb < 0`` and ``ub = 0``) are converted to forward
+irreversible reactions first, so "forward" means something different
 afterwards; see :doc:`functions/thermopt_cc`.
 
 What is in the package
@@ -46,37 +52,41 @@ What is in the package
    * - Function
      - Does
    * - :doc:`functions/thermopt_cc`
-     - Reports which directions each reaction can carry flux in, once
-       cycling is excluded
+     - Determines the thermodynamically feasible flux directions of every
+       reaction, and thereby the stoichiometrically and thermodynamically
+       blocked reactions
    * - :doc:`functions/enumeration`
-     - Lists the cycles themselves, with the relative flux through each
-       reaction
+     - Enumerates all TICs of a model and the flux direction of the
+       reactions involved
    * - :doc:`functions/thermopt_flux`
-     - Takes the cycling back out of a flux distribution that has it
+     - Detects and removes loops from a flux distribution, projecting it to
+       the nearest distribution in the thermodynamically feasible flux space
    * - :doc:`functions/thermoptics`
-     - Builds a context-specific model that is thermodynamically feasible
-       by construction
+     - Constructs a thermodynamically consistent context-specific model
+       (CSM)
 
 Which function do I want?
 -------------------------
 
-* To find out which reactions of a model are *genuinely* usable, rather than
-  usable only by cycling, use :doc:`functions/thermopt_cc`. It is strictly
-  stronger than flux consistency: on the *E. coli* models tested it blocked
-  130 to 242 reactions beyond what FVA-style consistency rejects.
-* To see the cycles, use :doc:`functions/enumeration`.
-* To clean up an FBA or sampling result you already have, use
+* To identify the stoichiometrically and thermodynamically blocked reactions
+  of a model, use :doc:`functions/thermopt_cc`. It is strictly stronger than
+  flux consistency: on the *E. coli* models tested it blocked 130 to 242
+  reactions beyond what flux consistency alone rejects.
+* To enumerate the TICs themselves, use :doc:`functions/enumeration`.
+* To remove loops from an FBA or flux sampling result you already have, use
   :doc:`functions/thermopt_flux`.
-* To build a context-specific model without inheriting the cycles of the
-  reference network, use :doc:`functions/thermoptics`.
+* To construct a CSM that does not inherit the TICs of the reference GEM,
+  use :doc:`functions/thermoptics`.
 * Before choosing ``tol``, read :doc:`tutorials/numerics`. It is the one
   parameter here that cannot simply be made small.
 
 Citation
 --------
 
-   Thermodynamically constrained reconstruction and analysis.
-   https://www.sciencedirect.com/science/article/pii/S2589004225012660
+   Pavan Kumar S. and Nirav Pravinbhai Bhatt (2025). ThermOptCobra:
+   Thermodynamically optimal construction and analysis of metabolic networks
+   for reliable phenotype predictions. *iScience* **28**\ (8), 113005.
+   https://doi.org/10.1016/j.isci.2025.113005
 
 .. toctree::
    :maxdepth: 2

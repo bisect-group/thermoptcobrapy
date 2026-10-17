@@ -36,7 +36,7 @@ BOUND_NORM = 1000.0
 
 
 def flip_reverse_only(model: "Model") -> List[str]:
-    """Orient every reverse-only reaction forward, in place.
+    """Convert every reaction irreversible in reverse to forward, in place.
 
     Parameters
     ----------
@@ -116,10 +116,11 @@ def prepare(model: "Model") -> Tuple["Model", List[str]]:
     Returns
     -------
     tuple of (cobra.Model, list of str)
-        A copy with the reverse-only reactions flipped and the extreme bounds
-        clamped, and the identifiers of the reactions that were flipped. The
-        copy is the ``modModel`` the MATLAB returns, and results refer to it
-        rather than to the model that was passed in.
+        A copy in which the reactions irreversible in the reverse direction
+        have been converted to forward irreversible reactions and the extreme
+        bounds clamped, plus the identifiers of the reactions that were
+        converted. The copy is the ``modModel`` the MATLAB returns, and
+        results refer to it rather than to the model that was passed in.
 
     """
     working = model.copy()

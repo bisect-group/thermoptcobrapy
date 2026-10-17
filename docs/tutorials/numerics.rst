@@ -15,8 +15,9 @@ meaning is strict:
 * :math:`z^+` on → :math:`v \ge tol`
 * :math:`z^-` on → :math:`v \le -tol`
 
-"Thermodynamically blocked" means *no assignment of these binaries lights the
-reaction up*. If the binaries can lie, every verdict is worthless.
+"Thermodynamically blocked" means *no assignment of these binaries activates
+the reaction*. If the binaries do not hold to their intended meaning, no
+verdict is trustworthy.
 
 Two ways to say it
 ------------------
@@ -36,7 +37,7 @@ for free. On a model with bounds of 1000 and Gurobi's floor of 1e-9, that is
 1e-6 of phantom flux on every indicator — **absolute, not relative**, so it
 does not shrink with the flux involved.
 
-Observed on a real model, with the integrality tolerance at 1e-6:
+Observed on a genome-scale model, with the integrality tolerance at 1e-6:
 
 .. code-block:: text
 
@@ -87,9 +88,9 @@ The floors
      - faster, often much
      - slower, sometimes faster
 
-Both are checked up front. A threshold below what the formulation can resolve
-raises with the value to use, rather than being left to surface as a wrong
-answer:
+Both are checked up front. A threshold below what the formulation can
+resolve raises with the value to use, rather than surfacing later as an
+incorrect result:
 
 .. code-block:: text
 
@@ -101,8 +102,8 @@ The bound that matters is the model's largest, so narrowing the flux bounds
 of the handful of reactions left at a default of 1000 lowers the floor for
 everything.
 
-Reactions that genuinely cannot carry ``tol`` are reported blocked. That is
-the honest answer at that threshold, not a failure.
+Reactions that cannot carry ``tol`` are reported blocked. That is the
+correct result at that threshold, not a failure.
 
 Why feasTol is not set to 1e-9
 ------------------------------
@@ -152,7 +153,7 @@ Use Gurobi or CPLEX.
 A worked choice
 ---------------
 
-An *E. coli* model with biomass forced at 25.03:
+An *E. coli* model with the biomass reaction forced at 25.03:
 
 .. list-table::
    :header-rows: 1
@@ -169,7 +170,7 @@ An *E. coli* model with biomass forced at 25.03:
    * - 1e-6
      - Works, via native indicators. 0 blocked
 
-The window exists because biomass has trace components — biotin's
-stoichiometric coefficient is 2e-6 — whose supply reactions must carry flux
-far below anything the growth rate itself suggests. Releasing the forced
-bound avoids the squeeze entirely.
+The window exists because the biomass reaction has trace components —
+biotin's stoichiometric coefficient is 2e-6 — whose supply reactions must
+carry flux far below what the growth rate itself would suggest. Releasing
+the forced bound avoids the problem entirely.

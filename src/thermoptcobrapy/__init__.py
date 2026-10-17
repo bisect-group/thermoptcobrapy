@@ -1,25 +1,29 @@
 """ThermOpt for cobrapy.
 
 Flux balance analysis constrains a network with the mass balance alone, and
-the mass balance has no opinion about flux that goes round in a circle. A set
-of reactions whose net effect is nothing can carry arbitrary flux at steady
-state. Thermodynamics forbids it: the free energy would have to fall all the
-way round the cycle and arrive back where it started.
+the mass balance does not account for thermodynamically infeasible cycles
+(TICs). Analogous to perpetual motion machines, these cycles violate the
+second law of thermodynamics by cycling metabolites indefinitely without any
+real change.
 
-These *thermodynamically infeasible cycles* are not a curiosity. They inflate
-maximum fluxes, make blocked reactions look usable, and are inherited by every
-context-specific model built on top of a network that still contains them.
+TICs lead genome-scale metabolic models (GEMs) to predict phenotypes that are
+thermodynamically infeasible, and such phenotypes carry no biological
+interpretation. FBA, FVA and flux sampling alike often predict maximum flux
+through reactions involved in TICs, and TICs are inherited by every
+context-specific model built on a network that still contains them.
 
 This package offers four ways at them:
 
-1. :func:`thermopt_cc` reports, for every reaction, which directions it can
-   carry flux in once cycling is excluded.
-2. :func:`thermopt_enum_milp` lists the cycles themselves, with the relative
-   flux through each reaction.
-3. :func:`thermopt_flux` takes the cycling back out of a flux distribution
-   that already has it.
-4. :func:`thermoptics` extracts a context-specific model that is
-   thermodynamically feasible by construction.
+1. :func:`thermopt_cc` determines the thermodynamically feasible flux
+   directions of every reaction, and thereby the stoichiometrically and
+   thermodynamically blocked reactions.
+2. :func:`thermopt_enum_milp` enumerates all TICs of a model and the flux
+   direction of the reactions involved.
+3. :func:`thermopt_flux` detects and removes loops from a flux distribution,
+   projecting it to the nearest distribution in the thermodynamically
+   feasible flux space.
+4. :func:`thermoptics` constructs a thermodynamically consistent
+   context-specific model (CSM).
 
 The mixed-integer routines need a real mixed-integer solver. Gurobi and CPLEX
 both qualify; GLPK does not, and is rejected rather than trusted when it
@@ -27,8 +31,10 @@ returns a solution its own constraints forbid.
 
 Reference
 ---------
-Thermodynamically constrained reconstruction and analysis.
-https://www.sciencedirect.com/science/article/pii/S2589004225012660
+Pavan Kumar S. and Nirav Pravinbhai Bhatt (2025). ThermOptCobra:
+Thermodynamically optimal construction and analysis of metabolic networks for
+reliable phenotype predictions. iScience 28(8), 113005.
+https://doi.org/10.1016/j.isci.2025.113005
 """
 
 from ._irreversible import convert_to_irreversible

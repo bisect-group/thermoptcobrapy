@@ -2,10 +2,10 @@
 
 Every ThermOpt routine narrows the problem the same way before doing anything
 expensive. Close all the exchange reactions and drop any positive lower bound,
-and the only flux the model can still carry is flux that goes round in a
-circle: with nothing entering or leaving, a steady state has no other option.
-The reactions that remain flux consistent under those conditions are exactly
-the reactions that can take part in a cycle.
+and any non-zero flux the model can still carry is cycling flux: with no input
+or output of nutrients, a steady state has no other option. The reactions that
+remain flux consistent under those conditions are exactly the reactions that
+can take part in a TIC.
 
 That is a consistency check, done with SPECTRA, mirroring the MATLAB's own
 ``spectraCC``.

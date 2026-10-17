@@ -2,12 +2,13 @@
 
 Flux consistency asks whether a reaction can carry flux at steady state.
 That is a weaker question than it looks, because a reaction can be flux
-consistent purely by running round in a cycle. ThermOptCC asks the stronger
+consistent only with support from a TIC. ThermOptCC asks the stronger
 question: can the reaction carry flux in a distribution that is also
 thermodynamically feasible?
 
-The answer per reaction is a direction, not just a verdict, because a
-reversible reaction may be feasible one way and not the other.
+Reactions are categorised into four groups -- Forward, Reverse, Reversible
+and Blocked -- because a reversible reaction may be thermodynamically
+feasible in one direction and not the other.
 """
 
 from logging import getLogger
@@ -33,7 +34,8 @@ REVERSIBLE = "Reversible"
 INITIAL_TIME_LIMIT = 120.0
 #: Added to the limit each time a solve runs out of time with nothing found.
 TIME_LIMIT_STEP = 60.0
-#: The limit stops growing here, so a hopeless model ends rather than hangs.
+#: The limit stops growing here, so an unsolvable model raises rather than
+#: running indefinitely.
 MAX_TIME_LIMIT = 3600.0
 
 
@@ -77,7 +79,8 @@ def thermopt_cc(
     -------
     tuple of (dict of {str: str}, cobra.Model)
         The verdict per reaction of the *returned* model, and that model: a
-        copy with the reverse-only reactions oriented forward and the extreme
+        copy in which the reactions irreversible in the reverse direction
+        have been converted to forward irreversible reactions and the extreme
         bounds clamped. Verdicts are ``"Blocked"``/``"Unblocked"``, or with
         `get_direction` one of ``"Blocked"``, ``"Forward"``, ``"Reverse"``,
         ``"Reversible"``.
@@ -97,7 +100,8 @@ def thermopt_cc(
     -----
     Results refer to the returned model, not to the one passed in, because
     the orientation step changes what "forward" means for any reaction that
-    was restricted to negative flux. This mirrors the MATLAB's ``modModel``.
+    was irreversible in the reverse direction. This is the MATLAB's
+    ``modModel``.
 
     """
     working, flipped = prepare(model)
@@ -137,8 +141,8 @@ def thermopt_cc(
         )
         if first_pass and problem.status == "infeasible":
             # Nothing is blocked here: no flux distribution at all satisfies
-            # the program, so reporting every reaction blocked would dress an
-            # infeasibility up as a result.
+            # the program, so reporting every reaction as blocked would
+            # present an infeasibility as a result.
             raise ThermOptError(
                 f"The consistency program is infeasible at tol={tol:.3g}, so "
                 f"no verdict can be given for any reaction. The usual cause "
@@ -170,8 +174,8 @@ def thermopt_cc(
             raise ThermOptTimeLimitError(
                 f"the consistency solve hit the {max_time_limit:g}s time limit "
                 f"ceiling with {len(core)} reaction(s) still unsettled. Their "
-                f"blocked/unblocked verdict was never proved, so reporting them "
-                f"either way would be a guess dressed up as a result. Raise "
+                f"blocked/unblocked verdict was never proved, so reporting "
+                f"them either way would be unsupported by the solve. Raise "
                 f"max_time_limit, or loosen tol so each solve is cheaper."
             )
         break

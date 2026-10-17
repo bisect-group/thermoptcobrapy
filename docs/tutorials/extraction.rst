@@ -1,10 +1,10 @@
-Extracting a context-specific model
-===================================
+Constructing a context-specific model
+=====================================
 
-Keeping the core without inheriting the cycles
------------------------------------------------
+Keeping the core without inheriting the TICs
+--------------------------------------------
 
-On the ring from :doc:`cycles`, ask for a model that keeps ``R4``:
+On the network from :doc:`cycles`, ask for a CSM that keeps ``R4``:
 
 .. code-block:: python
 
@@ -15,10 +15,10 @@ On the ring from :doc:`cycles`, ask for a model that keeps ``R4``:
    >>> blocked_core
    []
 
-The ring is gone. It could have been kept — ``R1``, ``R2`` and ``R3`` are
-flux consistent, and an extraction that asked only for consistency might well
-have retained them — but none of it supports ``R4``, and none of it can carry
-thermodynamically feasible flux.
+The TIC is gone. It could have been retained — ``R1``, ``R2`` and ``R3``
+are flux consistent, and an extraction requiring only flux consistency might
+well have kept them — but none of them support ``R4``, and none of them can
+carry thermodynamically feasible flux.
 
 Asking for something impossible
 -------------------------------
@@ -35,8 +35,8 @@ failing, it is dropped and reported:
    >>> blocked_core
    ['R1']
 
-With ``do_tocc=False`` the consistency check does not run first, so there is
-nothing to drop the blocked reaction and the program is simply infeasible:
+With ``do_tocc=False`` ThermOptCC does not run first, so nothing drops the
+blocked reaction from the core and the program is infeasible:
 
 .. code-block:: python
 
@@ -44,7 +44,7 @@ nothing to drop the blocked reaction and the program is simply infeasible:
    ThermOptInfeasibleCoreError: None of the 1 remaining core reaction(s) can
    carry thermodynamically feasible flux ...
 
-Only turn it off on a model already known to be thermodynamically flux
+Only turn it off on a GEM already known to be thermodynamically flux
 consistent.
 
 What survives
@@ -64,8 +64,8 @@ its direction, and the order the elements were in. Gene annotations need
 particular care — a gene's metadata does not survive the round trip through a
 re-parsed GPR — so they are restored from the source deliberately.
 
-On a real model
----------------
+On genome-scale models
+----------------------
 
 Five *E. coli* models from the protocol's Step 3, each with 40 randomly
 chosen core reactions:
@@ -78,7 +78,7 @@ chosen core reactions:
      - Reactions
      - Extracted
      - Core kept
-     - Blocked afterwards
+     - Thermodynamically blocked afterwards
    * - m398
      - 1523
      - 339

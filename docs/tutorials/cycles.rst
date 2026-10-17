@@ -1,11 +1,11 @@
-Finding the cycles
-==================
+Finding the TICs
+================
 
 A network small enough to check by hand
 ---------------------------------------
 
-Three reactions in a ring, plus a reaction that drains the ring to somewhere
-useful:
+Three reactions in a cycle, plus a reaction that drains it to a metabolite
+the network can export:
 
 .. code-block:: python
 
@@ -29,9 +29,10 @@ useful:
    model.add_reactions(reactions)
    model.solver = "gurobi"
 
-``B`` and ``C`` are touched by nothing but the ring, so at steady state
-``R1``, ``R2`` and ``R3`` must all carry the same flux — and that flux is a
-cycle. FVA does not mind:
+``B`` and ``C`` take part in no other reaction, so at steady state ``R1``,
+``R2`` and ``R3`` must all carry the same flux — and that flux is a TIC, a
+non-zero flux persisting with no input or output of nutrients. FVA predicts
+the maximum flux through it regardless:
 
 .. code-block:: python
 
@@ -55,14 +56,14 @@ Enumerating it
    ['R1', 'R2', 'R3'] [1.0, 1.0, 1.0]
    ['R1', 'R2', 'R3'] [-1.0, -1.0, -1.0]
 
-Both directions are reported, because both are cycles. ``R4`` and the
-exchanges are absent: they are not part of any ring.
+Both directions are reported, because the TIC is feasible either way round.
+``R4`` and the exchange reactions are absent: they take part in no TIC.
 
 Checking the answer
 -------------------
 
-A reported cycle should be a genuine steady-state mode of the closed network.
-That is worth verifying rather than trusting:
+A reported TIC should be a steady-state mode of the closed network. That is
+worth verifying rather than assuming:
 
 .. code-block:: python
 
@@ -80,12 +81,13 @@ That is worth verifying rather than trusting:
            v[position[rxn_id]] = value
        assert np.abs(S @ v).max() < 1e-6
 
-On the five *E. coli* models tested this holds exactly — the worst imbalance
-across every cycle of every model was 0.
+On the five *E. coli* models tested this holds exactly — the worst mass
+balance violation across every TIC of every model was 0.
 
-Overlapping cycles
-------------------
+Overlapping TICs
+----------------
 
-Add ``R5``: ``B → A``. Now there are three cycles, not two, because ``R2``
-and ``R3`` can run forward against ``R5`` reversed. Both enumerators find all
-three in both directions; see :doc:`../functions/enumeration`.
+Add ``R5``: ``B → A``. Now there are three TICs, not one, because ``R1`` and
+``R5`` form a second cycle and ``R2`` and ``R3`` can run forward against
+``R5`` reversed. The enumerator finds all three in both directions; see
+:doc:`../functions/enumeration`.

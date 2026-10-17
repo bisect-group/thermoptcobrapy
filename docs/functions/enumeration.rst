@@ -1,8 +1,8 @@
-Cycle enumeration
-=================
+TIC enumeration
+===============
 
-Lists the thermodynamically infeasible cycles of a model, with the relative
-flux through each of their reactions.
+Enumerates all thermodynamically infeasible cycles (TICs) of a model, with
+the relative flux coefficient of each reaction involved.
 
 Usage
 -----
@@ -17,42 +17,42 @@ Usage
        print(cycle, direction)
 
 ``cycles[i]`` is a list of reaction identifiers and ``directions[i]`` gives
-the flux through each of them, element for element. Those two are exactly
-what :doc:`thermopt_flux` consumes.
+the relative flux coefficient of each of them, element for element. Those
+two are exactly what :doc:`thermopt_flux` consumes.
 
-Where the cycles are looked for
--------------------------------
+Where the TICs are looked for
+-----------------------------
 
 The enumerator begins by closing the model: every exchange reaction is pinned
-shut and every positive lower bound released. With nothing entering or
-leaving, the only flux a steady state can carry is flux that goes round in a
-circle, so whatever stays flux consistent under those conditions is exactly
-what can take part in a cycle. That is a consistency check, done with
-SPECTRA.
+shut and every positive lower bound released. With no input or output of
+nutrients, any non-zero flux a steady state can carry is cycling flux, so
+whatever remains flux consistent under those conditions is exactly what can
+take part in a TIC. That is a flux consistency check, done with SPECTRA.
 
-The model handed back has its exchanges *open* — it is the oriented model the
-cycles refer to, not the closed one they were found in.
+The model handed back has its exchanges *open* — it is the oriented model
+the TICs refer to (the MATLAB's ``modModel``), not the closed one they were
+found in.
 
 How it works
 ------------
 
-``thermopt_enum_milp`` minimises the *number* of active reactions, which is
-the cycle one actually wants, rather than a cycle plus whatever else a solver
-happened to leave switched on. It forces one reaction to carry flux, solves
-for the smallest cycle through it, and excludes that cycle with a no-good cut
-so the next solve must produce a different one. Each cycle found also narrows
-the model the next solve runs on, to just that cycle's own reactions, which is
-what keeps the repeated solves cheap.
+``thermopt_enum_milp`` minimises the *number* of active reactions, which
+yields the TIC itself rather than a TIC plus whatever else the solver left
+switched on. It forces one reaction to carry flux, solves for the smallest
+TIC through it, and excludes that TIC with a no-good cut so the next solve
+must produce a different one. Each TIC found also narrows the model the next
+solve runs on to that TIC's own reactions, which is what keeps the repeated
+solves cheap.
 
-It runs at a flux threshold of 1. In a closed network the scale of a cycle is
-arbitrary; only its support matters. It needs a real mixed-integer solver:
-Gurobi or CPLEX.
+It runs at a flux threshold of 1. In a closed network the scale of a TIC is
+arbitrary; only the set of reactions involved and their relative flux
+coefficients matter. It needs a real mixed-integer solver: Gurobi or CPLEX.
 
 A worked example
 ----------------
 
-Take ``A→B→C→A`` with an extra ``B→A``. There are three cycles, each in two
-directions, and the enumerator finds all six:
+Take ``A→B→C→A`` with an extra ``B→A``. There are three TICs, each feasible
+in two directions, and the enumerator finds all six:
 
 .. code-block:: text
 
@@ -64,8 +64,9 @@ directions, and the enumerator finds all six:
    ['R2', 'R3', 'R5']        [-1.0, -1.0,  1.0]
 
 The third pair is the composite: ``R2`` and ``R3`` forward, against ``R5``
-reversed. Note that a cycle made entirely of reversible reactions runs
-backwards too, so its mirror image is recorded rather than searched for.
+reversed. Note that a TIC made entirely of reversible reactions is also
+feasible in the reverse direction, so its mirror image is recorded rather
+than searched for.
 
 Reference
 ---------
@@ -78,4 +79,4 @@ See also
 --------
 
 * :doc:`../tutorials/cycles` — worked examples
-* :doc:`thermopt_flux` — what to do with the cycles once you have them
+* :doc:`thermopt_flux` — what to do with the TICs once you have them

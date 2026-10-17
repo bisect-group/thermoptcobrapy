@@ -1,8 +1,8 @@
-Checking consistency
-====================
+Detecting the blocked reactions
+===============================
 
-On the ring from :doc:`cycles`
-------------------------------
+On the network from :doc:`cycles`
+---------------------------------
 
 .. code-block:: python
 
@@ -17,8 +17,9 @@ On the ring from :doc:`cycles`
    EX_A   Unblocked
    EX_D   Unblocked
 
-FVA gave ``R1`` a range of ±1000. The mass balance permits the ring; nothing
-else does.
+FVA gave ``R1`` a range of ±1000. ``R1``, ``R2`` and ``R3`` are flux
+consistent under stoichiometric and box constraints alone; adding the
+thermodynamic constraints reveals them as thermodynamically blocked.
 
 Directions
 ----------
@@ -45,36 +46,38 @@ Constrain ``R4`` to one direction and the verdict follows:
 Use the model that comes back
 -----------------------------
 
-Reactions restricted to negative flux are re-oriented before anything runs,
-so the verdicts are keyed to the returned model:
+Reactions irreversible in the reverse direction are converted to forward
+irreversible reactions before anything runs, so the verdicts are keyed to
+the returned model:
 
 .. code-block:: python
 
-   >>> model.reactions.R1.bounds = (-1000.0, 0.0)   # reverse-only
+   >>> model.reactions.R1.bounds = (-1000.0, 0.0)   # lb < 0, ub = 0
    >>> verdicts, oriented = thermopt_cc(model, tol=1e-4, seed=0)
    >>> oriented.reactions.R1.bounds
    (0.0, 1000.0)
    >>> model.reactions.R1.bounds      # the input is untouched
    (-1000.0, 0.0)
 
-The flux maps one to one onto the original's, negated. Reading a ``"Forward"``
-verdict against the input model would be reading it backwards.
+The flux maps one to one onto the original's, negated. Reading a
+``"Forward"`` verdict against the input model would be reading it backwards.
+This returned model is the MATLAB's ``modModel``.
 
 A forced bound can make the question unanswerable
 --------------------------------------------------
 
-Every reaction has to be either exactly zero or at least ``tol``. A reaction
-pinned to a growth rate can leave no room for that, and the program becomes
-infeasible — which is reported rather than dressed up as "everything is
-blocked":
+Every reaction has to carry either exactly zero flux or at least ``tol``. A
+reaction pinned to a growth rate can leave no room for that, and the program
+becomes infeasible — which is reported as such, rather than reported as
+every reaction being blocked:
 
 .. code-block:: python
 
    >>> thermopt_cc(ecoli, tol=1e-4)       # biomass forced at 25.03
    ThermOptError: The consistency program is infeasible at tol=0.0001, ...
 
-Biomass at 25.03 needs biotin synthesis running at 6.19e-5, below the
+Biomass at 25.03 requires biotin synthesis to carry 6.19e-5, below the
 threshold. Either lower ``tol`` — ``5e-5`` works on that model — or release
-the forced bound, which is anyway the right move if the question is which
+the forced bound, which is in any case appropriate if the question is which
 reactions *can* carry flux rather than what happens at a fixed growth rate.
 See :doc:`numerics`.

@@ -1,16 +1,19 @@
-"""Thermodynamically feasible context-specific models, ThermOptiCS.
+"""Thermodynamically consistent context-specific models, ThermOptiCS.
 
-Context-specific extraction normally asks for the smallest sub-network that
-keeps a given set of core reactions active. That leaves a gap: "active" is
-usually read as flux consistent, so a core reaction can be kept alive by a
-cycle, and the model handed back inherits the cycle along with it.
+CSM extraction normally asks for the most parsimonious sub-network carrying
+non-zero flux through a given set of core reactions, and that flux is
+usually required only to be flux consistent. This leaves a gap: a core
+reaction can carry flux with support from a TIC, and the CSM then inherits
+the TIC along with it.
 
-ThermOptiCS closes the gap by asking for activity that is thermodynamically
-feasible, using the same indicator program as the consistency check. It works
-in rounds. Each round first establishes which of the still-unplaced core
-reactions can be active together, then finds the cheapest set of non-core
-reactions that supports them. Everything settled drops out of the core and
-out of the penalty set, and the next round takes what is left.
+ThermOptiCS closes the gap by requiring the flux to be thermodynamically
+feasible as well, using the same indicator program as ThermOptCC. It works in
+rounds, through the two MILP formulations the paper calls unBlockRxns and
+minNetwork. Each round first establishes which of the still-unplaced core
+reactions can carry thermodynamically feasible flux together, then identifies
+a minimal network supporting them by penalising the inclusion of non-core
+reactions. Everything settled drops out of the core and out of the penalty
+set, and the next round takes what is left.
 """
 
 from logging import getLogger
@@ -41,18 +44,19 @@ def thermoptics(
     time_limit: float = DEFAULT_TIME_LIMIT,
     seed: Optional[int] = None,
 ) -> Tuple["Model", List[str]]:
-    """Extract a thermodynamically feasible context-specific model.
+    """Construct a thermodynamically consistent context-specific model.
 
     Parameters
     ----------
     model : cobra.Model
-        The reference model to extract from. It is left unchanged.
+        The reference GEM to extract from. It is left unchanged.
     core : iterable of str
-        The reactions the result has to keep active.
+        The core reactions, which the resulting CSM has to carry non-zero
+        flux through.
     tol : float, optional
         The flux a reaction has to reach to count as active (default 1e-4).
     do_tocc : bool, optional
-        Whether to run the consistency check first and drop the
+        Whether to run ThermOptCC first and drop the
         thermodynamically blocked reactions from the core (default True).
         Pass False only when the model is already known to be
         thermodynamically flux consistent; a blocked core reaction then makes
@@ -82,7 +86,7 @@ def thermoptics(
     Notes
     -----
     The result is built from the oriented working copy, so a reaction that
-    was restricted to negative flux in the input appears with its
+    was irreversible in the reverse direction in the input appears with its
     stoichiometry negated and its bounds swapped. Its flux maps one to one
     onto the original's, negated.
 
@@ -174,8 +178,8 @@ def thermoptics(
             )
 
         # A reaction belongs to the network when its indicator is set or it
-        # simply carries flux, which catches the support reactions the
-        # objective had no reason to switch on explicitly.
+        # carries flux, which catches the support reactions the objective had
+        # no reason to switch on explicitly.
         carried = {
             rxn_id
             for rxn_id, value in smallest.fluxes.items()

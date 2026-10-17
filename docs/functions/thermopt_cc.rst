@@ -1,8 +1,8 @@
 thermopt_cc
 ===========
 
-Reports, for every reaction, which directions it can carry flux in once
-cycling is excluded.
+Determines the thermodynamically feasible flux directions of every reaction,
+and thereby the stoichiometrically and thermodynamically blocked reactions.
 
 Usage
 -----
@@ -14,8 +14,9 @@ Usage
    verdicts, oriented = thermopt_cc(model, tol=1e-4)
    blocked = [r for r, v in verdicts.items() if v == "Blocked"]
 
-With ``get_direction=True`` the verdict is one of ``"Blocked"``,
-``"Forward"``, ``"Reverse"`` or ``"Reversible"`` instead of
+With ``get_direction=True`` each reaction is categorised into one of the
+four groups the MATLAB reports — ``"Forward"``, ``"Reverse"``,
+``"Reversible"`` or ``"Blocked"`` — instead of
 ``"Blocked"``/``"Unblocked"``. That costs roughly twice the work, because the
 reversible reactions are split in two and each half is tested separately: the
 search drops a reaction as soon as it is shown to carry flux, so without the
@@ -35,7 +36,7 @@ also run backward.
 own randomisation) and Fast-SNP's random projection weights use it, so the
 same seed on the same model gives the same verdicts and the same basis every
 time. Leave it unset and the search still gives a correct answer, just not
-necessarily the same cycle basis from one run to the next.
+necessarily the same null space basis from one run to the next.
 
 The search settles reactions in rounds, each one a mixed-integer solve over
 the reactions not yet settled. A round is given ``time_limit`` seconds
@@ -50,30 +51,32 @@ timing out with reactions left unsettled once the ceiling is reached,
 reporting the unsettled reactions as ``Blocked``. The MATLAB has no such
 ceiling — it grows the limit forever — but a result that was never proven is
 not a result, so this fails loudly instead of either hanging or guessing.
-Raise ``max_time_limit`` on a model that genuinely needs longer, or loosen
-``tol`` so each solve is cheaper.
+Raise ``max_time_limit`` on a model that needs longer, or loosen ``tol`` so
+each solve is cheaper.
 
 Why the model comes back
 ------------------------
 
-The second return value is not a convenience. Before anything else runs, every
-reaction restricted to negative flux is re-oriented: its stoichiometric column
-is negated and its bounds swapped. That is a change of variables, not a change
-of network, but it means "forward" refers to the returned model rather than to
-the one you passed in. Keying the verdicts to anything else would be wrong.
-The MATLAB returns the same thing as ``modModel``.
+The second return value is not a convenience. Before anything else runs,
+every reaction irreversible in the reverse direction (``lb < 0`` and
+``ub = 0``) is converted to a forward irreversible reaction: its
+stoichiometric column is negated and its bounds swapped. That is a change of
+variables, not a change of network, but it means "forward" refers to the
+returned model rather than to the one passed in. Keying the verdicts to
+anything else would be wrong. This is the MATLAB's ``modModel``.
 
 How it works
 ------------
 
-A reaction is thermodynamically consistent when some flux distribution exists
-that is *both* a steady state and free of infeasible cycling. The search
+A reaction is thermodynamically consistent when some flux distribution
+exists that is *both* a steady state and free of TICs. The search
 maximises the number of still-unsettled reactions that can be active at once,
 drops those it finds, and repeats until no more can be added.
 
 Each reaction carries two binaries, :math:`z^+_i` and :math:`z^-_i`, meaning
-"carries forward flux" and "carries reverse flux", and each cycling reaction
-carries a continuous :math:`G_j` standing in for a free energy:
+"carries forward flux" and "carries reverse flux", and each reaction that can
+take part in a TIC carries a continuous :math:`G_j` standing in for its Gibbs
+free energy change:
 
 .. math::
 
@@ -86,13 +89,14 @@ carries a continuous :math:`G_j` standing in for a free energy:
                      &\quad z^+_k = 1 \Rightarrow G_k < 0, \;
                             z^-_k = 1 \Rightarrow G_k > 0
 
-The last three lines are the thermodynamics. :math:`G` must fall when a
-cycling reaction runs forward and rise when it runs backward, and it is
-confined to the orthogonal complement of the *bounded* null space, computed
-by Fast-SNP (:func:`~thermoptcobrapy.fast_snp`). A cycle would need :math:`G`
-to decrease all the way round and return to its starting value, which that
-complement does not permit — so no assignment of :math:`z` can switch a whole
-cycle on.
+The last three lines are the thermodynamics: a reaction proceeds in the
+direction that releases energy, so :math:`G` is negative when it runs forward
+and positive when it runs in reverse. :math:`G` is confined to the orthogonal
+complement of the *bounded* null space, computed by Fast-SNP
+(:func:`~thermoptcobrapy.fast_snp`). A TIC would require :math:`G` to
+decrease around the whole cycle and return to its starting value, which that
+complement does not permit — so no assignment of :math:`z` can activate a
+complete TIC.
 
 How much stronger is this than flux consistency?
 ------------------------------------------------
@@ -105,7 +109,7 @@ Considerably. On five *E. coli* models from the protocol's Step 3:
 
    * - Model
      - Reactions
-     - Flux-blocked
+     - Stoichiometrically blocked
      - Thermodynamically blocked
    * - m398
      - 1523
@@ -128,10 +132,10 @@ Considerably. On five *E. coli* models from the protocol's Step 3:
      - 25
      - 267
 
-Every flux-blocked reaction is also thermodynamically blocked, as it must be.
-The difference — 130 to 242 reactions per model — is reactions that FVA and
-plain flux consistency accept because they can carry flux, but only by
-cycling.
+Every stoichiometrically blocked reaction is also thermodynamically blocked,
+as it must be. The difference — 130 to 242 reactions per model — is reactions
+that FVA and flux consistency accept, because they carry flux only with
+support from a TIC.
 
 Reference
 ---------

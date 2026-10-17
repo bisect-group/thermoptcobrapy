@@ -361,7 +361,7 @@ def check_tolerances(
     cannot distinguish from zero.
 
     Gurobi will not accept an integrality tolerance below 1e-9, so on a model
-    whose bounds reach 1000 the smallest usable threshold is around 5e-5.
+    whose bounds reach 1000 the smallest workable threshold is around 5e-5.
     Wanting to resolve finer flux than that means the big-M formulation is
     the wrong tool, not that the threshold should be forced down.
 
@@ -382,8 +382,8 @@ def check_tolerances(
             f"{integrality:.3g} the solver may grant {phantom:.3g} of flux to "
             f"a reaction whose indicator is off. Raise tol to at least "
             f"{SAFETY_FACTOR * phantom:.3g}, or narrow the model's flux "
-            f"bounds. Reactions that genuinely cannot carry {tol:.3g} are "
-            f"reported blocked, which is the honest answer at this threshold."
+            f"bounds. Reactions that cannot carry {tol:.3g} are reported "
+            f"blocked, which is the correct result at this threshold."
         )
     if tol < SAFETY_FACTOR * feasibility:
         raise ThermOptError(
