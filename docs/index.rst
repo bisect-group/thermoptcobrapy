@@ -70,8 +70,8 @@ Which function do I want?
 
 * To identify the stoichiometrically and thermodynamically blocked reactions
   of a model, use :doc:`functions/thermopt_cc`. It is strictly stronger than
-  flux consistency: on the *E. coli* models tested it blocked 130 to 242
-  reactions beyond what flux consistency alone rejects.
+  flux consistency, which accepts reactions carrying flux only with support
+  from a TIC.
 * To enumerate the TICs themselves, use :doc:`functions/enumeration`.
 * To remove loops from an FBA or flux sampling result you already have, use
   :doc:`functions/thermopt_flux`.

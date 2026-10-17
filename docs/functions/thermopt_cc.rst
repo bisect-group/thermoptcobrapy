@@ -99,45 +99,6 @@ decrease around the whole cycle and return to its starting value, which that
 complement does not permit — so no assignment of :math:`z` can activate a
 complete TIC.
 
-How much stronger is this than flux consistency?
-------------------------------------------------
-
-Considerably. On five *E. coli* models from the protocol's Step 3:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 20 20 28 32
-
-   * - Model
-     - Reactions
-     - Stoichiometrically blocked
-     - Thermodynamically blocked
-   * - m398
-     - 1523
-     - 23
-     - 182
-   * - m238
-     - 1443
-     - 21
-     - 170
-   * - m463
-     - 1530
-     - 22
-     - 152
-   * - m143
-     - 1546
-     - 22
-     - 179
-   * - m166
-     - 1202
-     - 25
-     - 267
-
-Every stoichiometrically blocked reaction is also thermodynamically blocked,
-as it must be. The difference — 130 to 242 reactions per model — is reactions
-that FVA and flux consistency accept, because they carry flux only with
-support from a TIC.
-
 Reference
 ---------
 
